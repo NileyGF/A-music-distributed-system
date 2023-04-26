@@ -1,0 +1,12 @@
+There are a few ways to stream music with python. 
+One way is to use the built-in module “musicplayer”. 
+This module allows you to play MP3 files. 
+You can also use the “pygame” module to play WAV files.
+
+
+We can play, split, merge, and customize our wav audio files by using the playsound and pydub libraries. 
+You can play audio files in almost any format using the snack sound kit, including WAV, AU, AIFF, MP3, CSL, SD, SMP, and NIST/Sphere.
+
+Python is an extremely popular programming language for software development, 
+making it suitable for music streaming. There are numerous libraries that simplify this process, 
+including Pymps and MusicPlayer. Music servers use graphical clients such as Pymserv to manage their files.
