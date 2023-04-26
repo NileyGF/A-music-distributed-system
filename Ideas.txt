@@ -10,3 +10,15 @@ You can play audio files in almost any format using the snack sound kit, includi
 Python is an extremely popular programming language for software development, 
 making it suitable for music streaming. There are numerous libraries that simplify this process, 
 including Pymps and MusicPlayer. Music servers use graphical clients such as Pymserv to manage their files.
+
+Actually, you pretty much can just start blasting mp3 data at a client as soon as the client asks for it. 
+MP3 encoding does not use a file header.
+
+http://www.mp3-tech.org/programmer/frame_header.html
+
+you'll have to give clients a way to set up the connection. 
+The de-facto standard is the SHOUTcast (ICY) protocol. This is very much like HTTP, 
+but with status and header fields just different enough that it isn't directly compatible 
+with Python's built-in http server libraries. You might be able to get those libraries 
+to do some of the work for you, but their documented interfaces won't be enough to get it done; 
+you'll have to read their code to understand how to make them speak SHOUTcast.
