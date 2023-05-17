@@ -7,7 +7,7 @@ SPLIT_SIZE = 10
 
 def create_db(data_base_file_path:str):
     """ Creates a sqlite database with especified name. The name should have a full existing path
-    to where the DB must be constructed, and the name as well
+    to where the database must be constructed, including the file name. The extension '.db' is not necessary
     Examples:
     'data/sqlite_database.db'
     'data/sqlite_database'
@@ -34,19 +34,21 @@ def create_db(data_base_file_path:str):
             connection.close()
             print("The SQLite connection is closed")
 
-def create_table(data_base_file_path:str,table_name:str,columns_list:list):
-    """Create an sqlite table in the file especified and with the name especified.
-    If columns_list has 0 elements the table won't be created.
+def create_table(data_base_file_path:str, table_name:str, columns_list:list):
+    """Createss an sqlite table in the file especified and with the name especified in 'table_name'.
+    If 'columns_list' has 0 elements the table won't be created.
     The format for columns_list is:
-    a list of strings where every string is 'column_name type_in_sqlite rest_of_params_to espicify_separated_by_spaces'
+    A list of strings where every string is 'column_name type_in_sqlite rest_of_params_to espicify_separated_by_spaces'
     Example:
-        [
-        'id INTEGER PRIMARY KEY',
-        'title TEXT NOT NULL',
-        'authors TEXT NOT NULL',
-        'genre TEXT NOT NULL'
-        ]
+            [
+            'id_S INTEGER PRIMARY KEY',
+            'title TEXT NOT NULL',
+            'artists TEXT NOT NULL',
+            'genre TEXT NOT NULL'
+            ]
     """
+    if len(columns_list) == 0:
+        return False
     try:
         connection = sqlite3.connect(data_base_file_path)
         create_table_query = "CREATE TABLE " + table_name + ' ( ' 
@@ -73,12 +75,19 @@ def create_table(data_base_file_path:str,table_name:str,columns_list:list):
             print("sqlite connection is closed")
 
 def insert_rows(data_base_file_path:str,table_name:str,columns_names:str,row_tuples_tuple:tuple):
-    """ Insert one or more rows in the especified table, of the especfied database.
-    columns_names is a string of the columns in the table, comma separated
-    row_tuples_tuple is a tuple with one or more elements, where each element is a tuple 
-    with the values to insert to the row. Must be ordered in the same fashion as colummns_names
+    """ Insert one or more rows in the specified table, of the specified database.
+    'columns_names' is a string of the name of the columns in the table, comma separated.
+    'row_tuples_tuple' is a tuple with one or more elements, where each element is a tuple 
+    with the values to insert to the row. Must be ordered in the same fashion as 'colummns_names'
     Example:
+        data_base_file_path = 'spotify_db.db'
+        table_name = 'songs'
+        columns = 'id_S, title, artists, genre'
+        rows = ((0, 'This Is Halloween', 'Marilyn Manson', 'Soundtrack'),
+                (6, 'Extraordinary Girl', 'Green Day', 'Punk Rock'),
+                (11, 'House of the Rising Sun', 'Five Finger Death Punch', 'Rock'))
 
+        insert_rows(data_base_file_path, table_name, columns, rows)
     """
     if len(row_tuples_tuple) == 0:
         return False
@@ -105,6 +114,15 @@ def insert_rows(data_base_file_path:str,table_name:str,columns_names:str,row_tup
             print("The sqlite connection is closed")
 
 def read_data(data_base_file_path:str, query:str="SELECT * from songs"):
+    """ Given the path of the database file and a sqlite query, returns all rows corresponding to the query
+        Examples:
+                # get all data from 'songs' table:
+                song_list = read_data('spotify_db.db', "SELECT * from songs")
+
+                # get a chunk of song which id is '11_dice_003' :
+                query = "SELECT * from chunks where id_Chunk = '11_dice_003'"
+                chunk = read_data('spotify_db.db', query)
+    """
     try:
         connection = sqlite3.connect(data_base_file_path)
         cursor = connection.cursor()
@@ -122,10 +140,19 @@ def read_data(data_base_file_path:str, query:str="SELECT * from songs"):
             connection.close()
             print("sqlite connection is closed")
 
+
 def get_song_tags(file_path:str):
+    """ Given an .mp3 file path tries to get 'artist', 'title' and 'genre' tags.
+        If the .mp3 file does not have all the tags, it will be returned 'Unknown'
+
+        Returns 3 strings values, one for each tag.
+
+        return title, artist, genre
+    """
     from mutagen.mp3 import MP3  
     from mutagen.easyid3 import EasyID3  
     import glob 
+
     filez = glob.glob(file_path) 
     audiofile = MP3(filez[0], ID3=EasyID3) 
     try:
@@ -143,19 +170,14 @@ def get_song_tags(file_path:str):
     
     return title, authors, genre
 
-def file_to_binary(file_path:str):
-    '''Convert data to binary format'''
-    with open(file_path, 'rb') as file:
-        blob_data = file.read()
-    return blob_data
 
 def Create_Songs_Chunks_tables(data_base_file_path:str='spotify_db.db'):
-
+    """ Create the tables for songs and chunks in the specified sqlite database file"""
     Song_table = ['id_S INTEGER PRIMARY KEY',
                   'title TEXT NOT NULL',
                   'artists TEXT NOT NULL',
                   'genre TEXT NOT NULL'
-              ]
+                ]
 
     Chunk_table = ['id_Chunk TEXT PRIMARY KEY',
                    'chunk BLOB NOT NULL',
@@ -167,6 +189,11 @@ def Create_Songs_Chunks_tables(data_base_file_path:str='spotify_db.db'):
     create_table(data_base_file_path, 'chunks', Chunk_table) 
 
 def Insert_songs(songs_list:list,data_base_file_path:str='spotify_db.db'):
+    """ Given a list of .mp3 files paths, and a sqlite database file:
+        Get the tags of each file and introduce it to the 'songs' table.
+        Also split the song in chunks with the same size, except perhaps, the last one.
+        These chunks are stored in the 'chunks' table. 
+    """
     next_id = -1
     try:
         connection = sqlite3.connect(data_base_file_path)
@@ -188,12 +215,15 @@ def Insert_songs(songs_list:list,data_base_file_path:str='spotify_db.db'):
         list_tags.append((next_id,title,authors,genre))
         next_id += 1
     tuple_tags = tuple(list_tags)
-    tuple_chunks = split_songs(songs_list,list_tags,False)
+    tuple_chunks = split_songs(songs_list,list_tags,True)
     insert_rows(data_base_file_path, 'songs', 'id_S, title, artists, genre', tuple_tags)
     insert_rows(data_base_file_path, 'chunks', 'id_Chunk, chunk, id_S', tuple_chunks)
 
 def split_songs(songs_list:list, songs_tags:list, reesplit:bool = False):
-    
+    """ Given a list of .mp3 files paths, and for each song, it's tags (id_S,title,artist,genre);
+        for every song, split it in SPLIT_SIZE seconds pieces, and for each piece make a tuple (id_chunk, chunk, id_S),
+        that belongs in the returned tuple of tuples.
+    """
     if reesplit:
         from pydub.utils import make_chunks
         chunks = []
@@ -228,6 +258,7 @@ def split_songs(songs_list:list, songs_tags:list, reesplit:bool = False):
     return tuple(chunks)
 
 def songs_list_from_directory(dir_path:str):
+    """ Given a directory(folder), get all files paths from it (ignoring folder in directory)"""
     songs_list = []
     for path in os.listdir(dir_path):
         # check if current path is a file
@@ -235,7 +266,9 @@ def songs_list_from_directory(dir_path:str):
             songs_list.append(os.path.join(dir_path, path))
     return songs_list
 
-def get_a_chunk(start_time_ms:int, id_S:int ):
+
+def get_a_chunk(start_time_ms:int, id_S:int):
+    """ Returns the chunk containing start_time_ms millisecond of the song with id = id_S"""
     c = int((start_time_ms / 1000) // 10)
     if c < 10:
         cs = '00'+ str(c)
@@ -254,8 +287,8 @@ def get_a_chunk(start_time_ms:int, id_S:int ):
 
     return sound
     
-
 def get_n_chunks(start_time_ms:int, id_S:int, n:int):
+    """ Returns n chunks, beginning in the one containing start_time_ms millisecond of the song with id = id_S"""
     ids = []
     audios = []
     st = start_time_ms
@@ -280,10 +313,10 @@ def get_n_chunks(start_time_ms:int, id_S:int, n:int):
     return audios
 
 def get_aviable_songs(data_base_file_path:str='spotify_db.db'):
+    """ List all songs' tags  in the specified database"""
     s_list = read_data(data_base_file_path, "SELECT * from songs")
     return s_list
 
-# Use cursor.fetchall() or fetchone() or fetchmany() to read query result.
 
 create_db('spotify_db.db')
 Create_Songs_Chunks_tables()
