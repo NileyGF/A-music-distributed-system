@@ -279,6 +279,9 @@ def get_n_chunks(start_time_ms:int, id_S:int, n:int):
         audios.append(sound)
     return audios
 
+def get_aviable_songs(data_base_file_path:str='spotify_db.db'):
+    s_list = read_data(data_base_file_path, "SELECT * from songs")
+    return s_list
 
 # Use cursor.fetchall() or fetchone() or fetchmany() to read query result.
 
@@ -293,3 +296,4 @@ chunks = get_n_chunks(32000,11,6)
 for i in range(6):
     chunks[i].export("from_db/11_dice_00"+str(i+3)+".mp3", format='mp3')
 
+songs_tags_for_client = get_aviable_songs()
