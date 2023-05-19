@@ -155,6 +155,9 @@ def get_song_tags(file_path:str):
 
     filez = glob.glob(file_path) 
     audiofile = MP3(filez[0], ID3=EasyID3) 
+   
+    duration = int(audiofile.info.length*1000)
+    
     try:
         authors = audiofile['artist'][0]
     except:
@@ -168,7 +171,7 @@ def get_song_tags(file_path:str):
     except:
         genre = 'Unknown genre'
     
-    return title, authors, genre
+    return title, authors, genre, duration
 
 
 def Create_Songs_Chunks_tables(data_base_file_path:str='spotify_db.db'):
@@ -176,7 +179,9 @@ def Create_Songs_Chunks_tables(data_base_file_path:str='spotify_db.db'):
     Song_table = ['id_S INTEGER PRIMARY KEY',
                   'title TEXT NOT NULL',
                   'artists TEXT NOT NULL',
-                  'genre TEXT NOT NULL'
+                  'genre TEXT NOT NULL',
+                  'duration_ms INTEGER NOT NULL',
+                  'chunk_slice INTEGER NOT NULL'
                 ]
 
     Chunk_table = ['id_Chunk TEXT PRIMARY KEY',
@@ -211,12 +216,12 @@ def Insert_songs(songs_list:list,data_base_file_path:str='spotify_db.db'):
         next_id = 0
     list_tags = []
     for i in range(len(songs_list)):
-        title, authors, genre = get_song_tags(songs_list[i])
-        list_tags.append((next_id,title,authors,genre))
+        title, authors, genre, duration = get_song_tags(songs_list[i])
+        list_tags.append((next_id,title,authors,genre,duration, SPLIT_SIZE))
         next_id += 1
     tuple_tags = tuple(list_tags)
     tuple_chunks = split_songs(songs_list,list_tags,True)
-    insert_rows(data_base_file_path, 'songs', 'id_S, title, artists, genre', tuple_tags)
+    insert_rows(data_base_file_path, 'songs', 'id_S, title, artists, genre, duration_ms, chunk_slice', tuple_tags)
     insert_rows(data_base_file_path, 'chunks', 'id_Chunk, chunk, id_S', tuple_chunks)
 
 def split_songs(songs_list:list, songs_tags:list, reesplit:bool = False):
@@ -317,16 +322,60 @@ def get_aviable_songs(data_base_file_path:str='spotify_db.db'):
     s_list = read_data(data_base_file_path, "SELECT * from songs")
     return s_list
 
+# Use cursor.fetchall() or fetchone() or fetchmany() to read query result.
 
-create_db('spotify_db.db')
-Create_Songs_Chunks_tables()
-songs_list = songs_list_from_directory('songs')
-Insert_songs(songs_list)
-chunk = get_a_chunk(22000,11)
-chunk.export("from_db/11_dice_002.mp3", format='mp3')
+# create_db('spotify_db.db')
+# Create_Songs_Chunks_tables()
+# songs_list = songs_list_from_directory('songs')
 
-chunks = get_n_chunks(32000,11,6)
-for i in range(6):
-    chunks[i].export("from_db/11_dice_00"+str(i+3)+".mp3", format='mp3')
+# Insert_songs(songs_list)
+# chunk = get_a_chunk(22000,11)
+# chunk.export("database/from_db/11_dice_002.mp3", format='mp3')
 
-songs_tags_for_client = get_aviable_songs()
+# chunks = get_n_chunks(32000,11,6)
+# for i in range(6):
+#     chunks[i].export("database/from_db/11_dice_00"+str(i+3)+".mp3", format='mp3')
+# write_file(get_a_chunk(0,11)[1],"database/from_db/11_dice_000.mp3")             
+
+
+# print(get_aviable_songs())
+
+
+
+
+
+# if __name__ == '__main__':
+# insert_data_to_db(1, *get_song_tags('songs/01-Babymetal Death.mp3'),'songs/01-Babymetal Death.mp3')
+# insert_data_to_db(2, *get_song_tags('songs/01- Welcome to the jungle.mp3'), 'songs/01- Welcome to the jungle.mp3')
+
+
+ 
+# def read_data_fromm_dbs(emp_id, audio_path):
+#     try:
+#         sqlite_con = sqlite3.connect('spotify_db.db')
+#         cursor = sqlite_con.cursor()
+#         print("Connected to SQLite")
+#         sql_blob_query = "SELECT * from Songs where id = ?"
+#         cursor.execute(sql_blob_query, (emp_id,))
+#         record = cursor.fetchall()
+#         for row in record:
+#             title = row[1]
+#             authors = row[2]
+#             # genres = row[3]
+#             song_bin = row[4]
+
+#             audio = f"{audio_path}{title}_{authors}.mp3"
+#             write_file(song_bin, audio)
+#         cursor.close()
+ 
+#     except sqlite3.Error as error:
+#         print(f"Failed to read blob data from sqlite table {error}")
+#     finally:
+#         if sqlite_con:
+#             sqlite_con.close()
+#             print("sqlite connection is closed")
+
+
+# audio_path = "database/from_db/"
+# read_data_fromm_dbs(1, audio_path)
+# read_data_fromm_dbs(2, audio_path)
