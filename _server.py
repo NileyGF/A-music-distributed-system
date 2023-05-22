@@ -5,6 +5,8 @@ MAX_CLIENTS = 2
 current_clients = 0
 lock = threading.Lock()
 
+client_dict = {}
+
 
 def handle_client(client_socket):
     global current_clients
@@ -46,4 +48,5 @@ def start_server(host, port):
         print("Cliente conectado:", addr)
         client_thread = threading.Thread(
             target=handle_client, args=(client_socket,))
+        client_dict[addr] = client_thread
         client_thread.start()
