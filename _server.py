@@ -16,6 +16,9 @@ def handle_client(client_socket):
         if not data:
             break
         print("Mensaje recibido del cliente:", data.decode())
+        client_socket.send(bytes(f"OK", 'UTF-8'))
+        client_socket.send(bytes(f"Testing", 'UTF-8'))
+        client_socket.send(bytes(f"!END!", 'UTF-8'))
         # Realiza cualquier procesamiento adicional necesario
 
     with lock:
