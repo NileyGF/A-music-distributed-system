@@ -13,7 +13,7 @@ from _server import *
 #     daemon = Pyro5.api.Daemon(host=self.ip, port=int(self.port)-2)
 #     uri = daemon.register(self)
 #     print(uri)
-#     nameserver.register(f'chatroom.{args.room_name}', uri)
+#     nameserver.register(f'server@{args.ip}', uri)
 
 #     # Inicia servidor
 #     self.subscribe_clients()
@@ -31,10 +31,10 @@ if __name__ == "__main__":
     # parser.add_argument("-pwd", "--password", help="Contraseña de acceso", default="12345678")
     args = parser.parse_args()
 
-    # # Inicializar el contexto ZeroMQ y el socket PUB (publicación) y SUB (suscripción)
-    # context = zmq.Context()
-    # publisher = context.socket(zmq.PUB)
-    # puller = context.socket(zmq.PULL)
+    # Inicializar el contexto ZeroMQ y el socket PUB (publicación) y SUB (suscripción)
+    context = zmq.Context()
+    publisher = context.socket(zmq.PUB)
+    puller = context.socket(zmq.PULL)
 
     # Inicializar sistema de nombres Pyro5
     # Definir el comando para ejecutar el servidor de nombres Pyro5
@@ -51,12 +51,13 @@ if __name__ == "__main__":
 
 # # # Ejecutar el comando en un proceso aparte
 #     subprocess.Popen(command)
+    # start()
 
-#  # Esperar 1 segundo para que el servidor de nombres se inicie
-#     time.sleep(1)
-# #     # Definir la dirección IP del broker y el puerto del servidor
+ # Esperar 1 segundo para que el servidor de nombres se inicie
+    time.sleep(1)
+#     # Definir la dirección IP del broker y el puerto del servidor
 
-#     nameserver = Pyro5.api.locate_ns()
+    # nameserver = Pyro5.api.locate_ns()
 
 #     # if args.password:
 #     #     print(f"Contraseña de acceso: {args.password}")
