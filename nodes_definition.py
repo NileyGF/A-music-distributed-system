@@ -6,6 +6,7 @@ and others.
 import database_controller
 import socket
 import pickle
+import core
 TAIL = '!END!'
 
 class Router_node:
@@ -24,15 +25,17 @@ class Router_node:
         data = self.__get_songs_tags_list()
         tail = pickle.dumps(TAIL)
         pickled_data = pickle.dumps(data)
-        connection.send(header)
+        result = core.send_data_to((header,pickled_data,tail),connection,True)
+        print(result)
+        # connection.send(header)
         
-        i = 0
-        connection.send(pickled_data)
-        # while (i <= len(pickled_data)-1):
-        #     line = pickled_data[i:min(i+1024, len(pickled_data)-1)]
-        #     i += 1025
-        #     connection.send(line)
-        connection.send(tail)
+        # i = 0
+        # connection.send(pickled_data)
+        # # while (i <= len(pickled_data)-1):
+        # #     line = pickled_data[i:min(i+1024, len(pickled_data)-1)]
+        # #     i += 1025
+        # #     connection.send(line)
+        # connection.send(tail)
     
         
 
