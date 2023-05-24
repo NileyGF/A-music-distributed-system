@@ -20,7 +20,7 @@ server_sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
 server_sock.bind(server_addr) # Enlaza el puerto
 server_sock.listen(3) # Espera por un clientex  
 client_n = 1
-router = nd.Router_node()
+router = nd.Router_node(None, None)
 while True:
     # Establece la conexión y lee un mensaje
     conn, client_addr = server_sock.accept()

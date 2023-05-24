@@ -10,13 +10,17 @@ import core
 TAIL = '!END!'
 
 class Router_node:
-    def __init__(self) -> None:
+    def __init__(self, router_group_addr:str, reading_group_addr:str) -> None:
         self.providers_by_song = dict()  # update by time or by event
         self.songs_tags_list = list()     # update by time or by event
+
+        self.__get_songs_tags_list()
 
     
     def __get_songs_tags_list(self):
         # fix to connect to a reader node and ask for it
+
+        # change to conect to a reading node and ask for the list 
         self.songs_tags_list = database_controller.get_aviable_songs()
         return self.songs_tags_list
     
@@ -27,15 +31,6 @@ class Router_node:
         pickled_data = pickle.dumps(data)
         result = core.send_data_to((header,pickled_data,tail),connection,True)
         print(result)
-        # connection.send(header)
-        
-        # i = 0
-        # connection.send(pickled_data)
-        # # while (i <= len(pickled_data)-1):
-        # #     line = pickled_data[i:min(i+1024, len(pickled_data)-1)]
-        # #     i += 1025
-        # #     connection.send(line)
-        # connection.send(tail)
     
         
 
