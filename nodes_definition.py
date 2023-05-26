@@ -25,12 +25,12 @@ class Router_node:
         return self.songs_tags_list
     
     def send_songs_tags_list(self,connection:socket.socket):
-        header = pickle.dumps('SSList')
-        data = self.__get_songs_tags_list()
-        tail = pickle.dumps(TAIL)
-        pickled_data = pickle.dumps(data)
-        result = core.send_data_to((header,pickled_data,tail),connection,True)
-        print(result)
+        data = database_controller.get_aviable_songs()
+        h_d_t_list = tuple(["SSList",data,"!END!"])
+        pickled_data = pickle.dumps(h_d_t_list)
+
+        result = core.sender_3th(pickled_data,connection)
+        print("Songs Tags Sended: ",result)
     
         
 

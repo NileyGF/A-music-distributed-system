@@ -20,33 +20,14 @@ client_sock.connect(server_addr)
 # Cierra la conexión
 # client_sock.close()
 data = core.receive_data_from(client_sock)
-header = pickle.loads(data[0])
-d = data[1]
-for i in range(2,len(data)):
-    d += data [i]
-d = pickle.loads(d)
+# header = pickle.loads(data[0])
+# d = data[1]
+# for i in range(2,len(data)):
+#     d += data [i]
+d = pickle.loads(data)
 print(d)
-header = pickle.dumps("ACK")
-data = "OK"
-tail = pickle.dumps("!END!")
-pickled_data = pickle.dumps(data)
-result = core.send_data_to((header,pickled_data,tail),client_sock,False)
+h_d_t_list = tuple(["ACK","OK","!END!"])
+pickled_data = pickle.dumps(h_d_t_list)
+result = core.sender_3th(pickled_data,client_sock)
 print(result)
-# header = client_sock.recv(1024)
-# header = pickle.loads(header)
-# print(header)
-# data = None
-# while True:
-#     msg = client_sock.recv(1024)
-#     try:
-#         decode = pickle.loads(msg)
-#         if decode == '!END!':
-#             break
-#     except:
-#         pass
-
-#     if data: data+=msg
-#     else: data = msg
-# data_d = pickle.loads(data)
-# print(data_d)
     
