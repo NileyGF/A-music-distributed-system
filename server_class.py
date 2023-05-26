@@ -34,6 +34,7 @@ class Server:
 
     # Socket Programming for Server 1 to 4 (it can be more)
     def serverProgram(self, chosenPort):
+        print("Im ", chosenPort)
         serverPort = chosenPort
         serverIP = self.serverIpAddr
         serverSocket = socket(AF_INET, SOCK_STREAM)
@@ -148,28 +149,6 @@ def main():
         p4.terminate()
         os._exit(os.EX_OK)
 
-    # Function to create Server 1
-    def runServer1():
-        Server1.serverProgram(PORT_NUMBERS[0])
-
-    # Function to create Server 2 only.
-    def runServer2():
-        Server2.serverProgram(PORT_NUMBERS[1])
-
-    # Function to create Server 3 only.
-    def runServer3():
-        Server3.serverProgram(PORT_NUMBERS[2])
-
-    # Function to create Server 4 only.
-    def runServer4():
-        Server4.serverProgram(PORT_NUMBERS[3])
-
-    def runServer5():
-        try:
-            Server5.closingServer(PORT_NUMBERS[4])
-        except Exception as e:
-            exitProgram()
-
     def output():
         while True:
             print("MultiServers")
@@ -210,10 +189,10 @@ def main():
             os.system("clear")
 
     # 4 processes and 2 thread created.
-    p1 = multiprocessing.Process(target=runServer1)
-    p2 = multiprocessing.Process(target=runServer2)
-    p3 = multiprocessing.Process(target=runServer3)
-    p4 = multiprocessing.Process(target=runServer4)
+    p1 = multiprocessing.Process(target=runServer(Server1, PORT_NUMBERS[0]))
+    p2 = multiprocessing.Process(target=runServer(Server2, PORT_NUMBERS[1]))
+    p3 = multiprocessing.Process(target=runServer(Server3, PORT_NUMBERS[2]))
+    p4 = multiprocessing.Process(target=runServer(Server4, PORT_NUMBERS[3]))
     t1 = threading.Thread(target=runServer5)
     t2 = threading.Thread(target=output)
 
@@ -235,6 +214,31 @@ def main():
     p4.join()
     t1.join()
     t2.join()
+
+    # Function to create Server 1
+
+
+def runServer(server, port):
+    server.serverProgram(port)
+
+    # Function to create Server 2 only.
+    # def runServer2():
+    #     main.Server2.serverProgram(PORT_NUMBERS[1])
+
+    # # Function to create Server 3 only.
+    # def runServer3():
+    #     Server3.serverProgram(PORT_NUMBERS[2])
+
+    # # Function to create Server 4 only.
+    # def runServer4():
+    #     Server4.serverProgram(PORT_NUMBERS[3])
+
+
+def runServer5(Server5, PORT_NUMBERS):
+    try:
+        Server5.closingServer(PORT_NUMBERS[4])
+    except Exception as e:
+        main.exitProgram()
 
 
 # Driver code
