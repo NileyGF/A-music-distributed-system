@@ -3,52 +3,43 @@ import multiprocessing
 import time
 import pickle
 
-def send_data_to(Info:tuple,connection:socket.socket,wait_for_response:bool=True,attempts:int=3,time_to_retry_ms:int=1000,bytes_flow:int=1024):
-    i = 0
+TAIL = '!END!'
+
+def send_bytes_to(payload:bytes,connection:socket.socket,wait_for_response:bool=True,attempts:int=3,time_to_retry_ms:int=1000,bytes_flow:int=1500, timeout=10):
+    # number of sending attempts while a disconnection error pops up
     if attempts < 0: attempts = 3
-    send = []
-    for item in Info:
-        item:bytes
-        if len(item) <= bytes_flow:
-            send.append(item)
-        else:
-            for i in range(0,len(item),bytes_flow):
-                send.append(item[i:min(i+bytes_flow+1,len(item))])
-    n_s = len(send)
     ok = False
+    i = 0
     while i < attempts:
         try:
-            for i in range(n_s):
-                connection.send(send[i])
+            total_sent = 0
+            start = 0
+            while start < len(payload):
+                
+                # Calculate remaining length based on payload size and current chunk size
+                end = min( len(payload), start + bytes_flow ) 
+                    
+                # Send chunk and keep track of how much was actually sent
+                sent = connection.send(payload[start : end])
+                total_sent += sent
+                start += sent
+                print("\nSent %d/%d bytes" % (total_sent, len(payload)))
             ok = True
             break
         except socket.error as error:
-            print(error) # remove
             i +=1
+            print(error, "Error while sending data. Starting over for ",i," time after resting for ",time_to_retry_ms/1000,"sec.") # remove
             time.sleep(time_to_retry_ms/1000) # find a better way
+    
+    # If data was sended correctly and waiting for an ACk, receive it and return the proper label and data
     if ok:
         if wait_for_response:
-            response = receive_data_from(connection,bytes_flow)
+            response = receive_data_from(connection,bytes_flow,5000,3)
             return "OK", response
-        else:   # Acknowledgement
+        else:   
             "OK", None
     else:
-        return "Connection Lost Error!"
-
-def sender_3th(payload:bytes,connection:socket.socket,bytes_flow:int=1500, timeout=10):
-    # Loop through chunks of data to send
-    total_sent = 0
-    start = 0
-    while start < len(payload):
-        
-        # Calculate remaining length based on payload size and current chunk size
-        end = min( len(payload), start + bytes_flow ) 
-            
-        # Send chunk and keep track of how much was actually sent
-        sent = connection.send(payload[start : end])
-        total_sent += sent
-        start += sent
-        print("\nSent %d/%d bytes" % (total_sent, len(payload)))
+        return "Connection Lost Error!", None
 
 def receive_data_from(connection:socket.socket,bytes_flow:int=1024,waiting_time_ms:int=2500,iter_n:int=5):
     def _receive_handler(queue:multiprocessing.Queue,connection:socket.socket,bytes_flow:int=1024):
@@ -64,7 +55,7 @@ def receive_data_from(connection:socket.socket,bytes_flow:int=1024,waiting_time_
     i = 0
     msg = None
     while i < iter_n:
-        # rd = multiprocessing.Value('return_dict',dict())
+        
         queue = multiprocessing.Queue()
         queue.put(dict())
         p = multiprocessing.Process(target=_receive_handler,args=(queue,connection,bytes_flow))
@@ -78,12 +69,11 @@ def receive_data_from(connection:socket.socket,bytes_flow:int=1024,waiting_time_
             rd = queue.get()
             msg = rd.get('return')
            
-        
         if msg != None:
             data = data + msg
             try:
                 decode = pickle.loads(data)
-                if '!END!' in decode:
+                if TAIL in decode:
                     print('tail reached')
                     break
                 else: print(decode)
@@ -91,5 +81,6 @@ def receive_data_from(connection:socket.socket,bytes_flow:int=1024,waiting_time_
                 pass
         else: i+=1
         
-    print('failed iter: ', i, '. data = ', len(data))
+    print('Failed iter: ', i, '. Received data = ', len(data))
     return data
+

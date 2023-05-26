@@ -3,7 +3,8 @@ from threading import *
 import nodes_definition as nd
 
 def client_handler(connection,client_addr):
-    router.send_songs_tags_list(connection)
+    sended, received = router.send_songs_tags_list(connection)
+    print('sended: ',sended, ' received by client',received)
     # conn.send(bytes(f"Hello client {client_addr}", 'UTF-8')) # Envia un mensaje
     
     # exchanges = 1
@@ -21,10 +22,14 @@ server_sock.bind(server_addr) # Enlaza el puerto
 server_sock.listen(3) # Espera por un clientex  
 client_n = 1
 router = nd.Router_node(None, None)
-while True:
-    # Establece la conexión y lee un mensaje
-    conn, client_addr = server_sock.accept()
-    print('CONNECTION: ',client_n)
-    client_n += 1
-    client_thread = Thread(target=client_handler, args=(conn,client_addr))
-    client_thread.start()
+try:
+    while True:
+        
+        conn, client_addr = server_sock.accept()
+        
+        print('CONNECTION: ',client_n)
+        client_n += 1
+        client_thread = Thread(target=client_handler, args=(conn,client_addr))
+        client_thread.start()
+finally:
+    server_sock.close()

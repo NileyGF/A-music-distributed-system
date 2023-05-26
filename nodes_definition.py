@@ -7,7 +7,7 @@ import database_controller
 import socket
 import pickle
 import core
-TAIL = '!END!'
+# TAIL = '!END!'
 
 class Router_node:
     def __init__(self, router_group_addr:str, reading_group_addr:str) -> None:
@@ -26,11 +26,16 @@ class Router_node:
     
     def send_songs_tags_list(self,connection:socket.socket):
         data = database_controller.get_aviable_songs()
-        h_d_t_list = tuple(["SSList",data,"!END!"])
+        h_d_t_list = tuple(["SSList",data,core.TAIL])
         pickled_data = pickle.dumps(h_d_t_list)
 
-        result = core.sender_3th(pickled_data,connection)
-        print("Songs Tags Sended: ",result)
+        result = core.send_bytes_to(pickled_data,connection,True)
+        if result [0] == "OK":
+            print("Songs Tags Sended: ",pickle.loads(result[1]))
+            if result[0] == 'ACK' and result[1] == 'OK':
+                return True, True
+            return True, False
+        return False, False
     
         
 
