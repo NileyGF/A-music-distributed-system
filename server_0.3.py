@@ -22,6 +22,8 @@ server_sock.bind(server_addr) # Enlaza el puerto
 server_sock.listen(3) # Espera por un clientex  
 client_n = 1
 router = nd.Router_node(None, None)
+dns = nd.DNS_node()
+# record = nd.DNS_node._add_record('distpotify.router',300,'127.0.0.1')
 try:
     while True:
         
