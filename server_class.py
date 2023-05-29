@@ -8,6 +8,8 @@ import os
 from os import path
 from stat import *  # ST_SIZE etc
 import threading
+import core
+import pickle
 
 
 class Server:
@@ -43,13 +45,15 @@ class Server:
         serverSocket.listen(5)
         liveStatus = "Alive"
         conn, address = serverSocket.accept()
+        print(conn)
         while True:
             try:
                 # print("Connection from: " + str(address))
-                data = conn.recv(4096)
+                data = core.receive_data_from(conn)
                 # Decode received data into UTF-8
-                data = data.decode('utf-8')
+                data = pickle.loads(data)
                 # Convert decoded data into list
+                print(data)
                 data = eval(data)
                 if (self.liveStatus == "Dead"):
                     # print("Im here")
@@ -65,6 +69,7 @@ class Server:
                 # Block runs when all segments asked by client have been sent.
                 # Do last minute programming here
                 # print("Server "+str(self.serverNumber)+" list over")
+                print(e)
                 continue
         # print("Server not listening")
         # serverSocket.close()
@@ -119,7 +124,7 @@ def main():
     # argList = sys.argv
     # print(argSize, argList)
     argList = ['server_class.py', '--status-interval', '10', '--num-of-servers', '5',
-               '--file-name', 'data.txt', '-server-ip', '127.0.0.1', '8888', '8887', '8886', '8885', '8884']
+               '--file-name', 'data.txt', '-server-ip', '0.0.0.0', '8888', '8887', '8886', '8885', '8884']
     argSize = 14
     # --------- Constants ---------
     STATUS_INTERVAL = int(argList[2])
@@ -200,15 +205,15 @@ def main():
 
     # p1.run()
     time.sleep(0.04)
-    p2.run()
+    p2.start()
     time.sleep(0.04)
-    p3.run()
+    p3.start()
     time.sleep(0.04)
-    p4.run()
+    p4.start()
     time.sleep(0.04)
-    t1.run()
+    t1.start()
     time.sleep(0.04)
-    t2.run()
+    t2.start()
 
     p1.join()
     p2.join()
