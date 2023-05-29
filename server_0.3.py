@@ -16,12 +16,13 @@ def client_handler(connection,client_addr):
     connection.close()
 
 
-server_addr = ('127.0.0.1', 12345) # Dirección IP
+server_addr = ('192.168.43.147', 8888) # Dirección IP
 server_sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+# server_sock.getifaddrs()
 server_sock.bind(server_addr) # Enlaza el puerto
 server_sock.listen(3) # Espera por un clientex  
 client_n = 1
-router = nd.Router_node(None, None)
+# router = nd.Router_node(None, None)
 dns = nd.DNS_node()
 # record = nd.DNS_node._add_record('distpotify.router',300,'127.0.0.1')
 try:

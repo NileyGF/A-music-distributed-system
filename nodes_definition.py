@@ -13,15 +13,18 @@ import multiprocessing
 # import threading
 # TAIL = '!END!'
 
-headers = { 'SSList':0, # Send Songs List 
-            'RSList':0,#send_songs_tags_list, # Request Songs List
-            'Rsong': 0, # Request song
-            'SPList':0, # Send Providers List
-            'Rchunk':0, # Request chunk
-            'Schunk':0, # Send chunk
+headers = { 'SSList':0,     # Send Songs List 
+            'RSList':0,     #send_songs_tags_list, # Request Songs List
+            'Rsong': 0,     # Request song
+            'SPList':0,     # Send Providers List
+            'Rchunk':0,     # Request chunk
+            'Schunk':0,     # Send chunk
             'ACK':0,
-            'RNSolve':0,# Request Name Solve 
-            'SNSolve':0 # Send Name Solve
+            'RNSolve':0,    # Request Name Solve 
+            'SNSolve':0,    # Send Name Solve
+            'NRServer':0, # New Router Server
+            'NDServer':0, # New Data Server
+            # ''
             }
 
 class Router_node:
@@ -38,13 +41,13 @@ class Router_node:
         h_d_t_list = tuple(["ACK","OK","!END!"])
         pickled_data = pickle.dumps(h_d_t_list)
         core.send_bytes_to(pickled_data,sock,False)
-        
         sock.close()
-        # now connect to "distpotify.router.leader" and bla bla bla 
+
+        # now connect to "distpotify.router.leader" 
         leader_addr = (result[1],core.LEADER_PORT)
         sock.connect(leader_addr)
 
-        
+
         self.providers_by_song = dict()  # update by time or by event
         self.songs_tags_list = list()     # update by time or by event
 
@@ -83,14 +86,15 @@ class DNS_node:
         TTL   : Time to live (how long the RR can be cached).Represents the number of seconds that a resolver cache can store the record before discarding it.
         Data  : The actual content of the record, typically consisting of an IP address, domain name, or other relevant identifier."""
     
-    def __init__(self,dns_ip='127.0.0.1',dns_port=5383):
+    def __init__(self,dns_ip='192.168.43.147',dns_port=5383):
         self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((dns_ip,dns_port)) 
         self.socket.listen(3)
         self.headers = { 'ACK': 0,
-                         'RNSolve':0,# Request Name Solve 
-                         'SNSolve':0 # Send Name Solve
+                         'AddRec':0, # Add Record | data: (labels, ip_addr) 
+                         'RNSolve':0,# Request Name Solve | data: labels
+                         'SNSolve':0 # Send Name Solve    | data: ip_addr
             }
         p = multiprocessing.Process(target=self.run,args=())
         p.start()
@@ -182,7 +186,6 @@ class DNS_node:
 
         to_encode = tuple(['SNSolve', datas, core.TAIL])
         return to_encode
-    
     
     @staticmethod
     def _client_handler(connection:socket.socket,client_addr):
