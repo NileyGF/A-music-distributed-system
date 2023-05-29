@@ -115,10 +115,12 @@ class Server:
 
 def main():
     # --------- Retrieve info from the terminal command ---------
-    argSize = len(sys.argv)
-    argList = sys.argv
+    # argSize = len(sys.argv)
+    # argList = sys.argv
     # print(argSize, argList)
-
+    argList = ['server_class.py', '--status-interval', '10', '--num-of-servers', '5',
+               '--file-name', 'data.txt', '-server-ip', '127.0.0.1', '8888', '8887', '8886', '8885', '8884']
+    argSize = 14
     # --------- Constants ---------
     STATUS_INTERVAL = int(argList[2])
     NUM_OF_SERVERS = int(argList[4])
@@ -128,7 +130,7 @@ def main():
     # PORT_NUMBERS = [8888, 8883, 8884, 8885, 8886]
 
     # --------- Populating PORT_NUMBERS with 'n' number of ports ---------
-    for n in range(10, argSize):
+    for n in range(9, argSize):
         port = int(argList[n])
         PORT_NUMBERS.append(port)
 
@@ -139,7 +141,7 @@ def main():
     Server4 = Server(4, SERVER_IP)
     Server5 = Server(5, SERVER_IP)
 
-    # Server 1 and 2 is responsible of DB updates. (Ask to Niley)
+    # Server 1 and 2 are responsible of DB updates. (Ask to Niley)
 
     # Function to safely exit program.
     def exitProgram():
@@ -196,17 +198,17 @@ def main():
     t1 = threading.Thread(target=runServer5)
     t2 = threading.Thread(target=output)
 
-    p1.start()
+    # p1.run()
     time.sleep(0.04)
-    p2.start()
+    p2.run()
     time.sleep(0.04)
-    p3.start()
+    p3.run()
     time.sleep(0.04)
-    p4.start()
+    p4.run()
     time.sleep(0.04)
-    t1.start()
+    t1.run()
     time.sleep(0.04)
-    t2.start()
+    t2.run()
 
     p1.join()
     p2.join()
@@ -244,3 +246,4 @@ def runServer5(Server5, PORT_NUMBERS):
 # Driver code
 if __name__ == "__main__":
     main()
+    # python3 server_class.py --status-interval 10 --num-of-servers 5 --file-name data.txt -server-ip 127.0.0.1 8888 8887 8886 8885 8884
