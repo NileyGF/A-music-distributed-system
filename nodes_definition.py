@@ -25,7 +25,26 @@ headers = { 'SSList':0, # Send Songs List
             }
 
 class Router_node:
-    def __init__(self, router_group_addr:str, reading_group_addr:str) -> None:
+    def __init__(self):
+        sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        sock.connect(core.DNS_addr)
+        h_d_t_list = tuple(["RNSolve","distpotify.router.leader","!END!"])
+        pickled_data = pickle.dumps(h_d_t_list)
+        core.send_bytes_to(pickled_data,sock,False)
+        result = core.receive_data_from(sock,waiting_time_ms=5000,iter_n=8)
+        if not result or len(result) == 0:
+            raise errors.ConnectionError("DNS unresponsive.")
+        result = pickle.loads(result)
+        h_d_t_list = tuple(["ACK","OK","!END!"])
+        pickled_data = pickle.dumps(h_d_t_list)
+        core.send_bytes_to(pickled_data,sock,False)
+        
+        sock.close()
+        # now connect to "distpotify.router.leader" and bla bla bla 
+        leader_addr = (result[1],core.LEADER_PORT)
+        sock.connect(leader_addr)
+
+        
         self.providers_by_song = dict()  # update by time or by event
         self.songs_tags_list = list()     # update by time or by event
 

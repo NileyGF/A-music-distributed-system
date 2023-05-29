@@ -4,6 +4,8 @@ import time
 import pickle
 
 TAIL = '!END!'
+DNS_addr = ('127.0.0.1',5383)
+LEADER_PORT = 8989
 
 def send_bytes_to(payload:bytes,connection:socket.socket,wait_for_response:bool=True,attempts:int=3,time_to_retry_ms:int=1000,bytes_flow:int=1500, timeout=10):
     # number of sending attempts while a disconnection error pops up
