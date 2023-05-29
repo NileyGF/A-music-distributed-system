@@ -23,12 +23,12 @@ print(client_sock)
 
 # data = core.receive_data_from(client_sock)
 
-d = pickle.loads(data)
-print(d)
-h_d_t_list = tuple(["ACK", "OK", "!END!"])
-pickled_data = pickle.dumps(h_d_t_list)
-result = core.sender_3th(pickled_data, client_sock)
-print(result)
+# d = pickle.loads(data)
+# print(d)
+# h_d_t_list = tuple(["ACK", "OK", "!END!"])
+# pickled_data = pickle.dumps(h_d_t_list)
+# result = core.sender_3th(pickled_data, client_sock)
+# print(result)
 
 # h_d_t_list = tuple(["RNSolve","distpotify.router","!END!"])
 # pickled_data = pickle.dumps(h_d_t_list)
