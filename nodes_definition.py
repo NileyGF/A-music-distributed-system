@@ -10,6 +10,7 @@ import socket
 import pickle
 import os
 import math
+import time
 import multiprocessing
 
 headers = { 'SSList':0,     # Send Songs List 
@@ -21,8 +22,11 @@ headers = { 'SSList':0,     # Send Songs List
             'ACK':0,
             'RNSolve':0,    # Request Name Solve 
             'SNSolve':0,    # Send Name Solve
+            'AddRec' :0,    # Add Record | data: (labels, addr, ttl) 
             'NRServer':0,   # New Router Server
             'NDServer':0,   # New Data Server
+            'ping'    :0,   # ping -_-  
+            'echoreply':0,  # ping reply
             # ''
             }
 
@@ -139,7 +143,7 @@ class DNS_node:
         self.socket.bind((dns_ip,dns_port)) 
         self.socket.listen(3)
         self.headers = { 'ACK': 0,
-                         'AddRec':0, # Add Record | data: (labels, ip_addr) 
+                         'AddRec':0, # Add Record | data: (labels, ip_addr, ttl) 
                          'RNSolve':0,# Request Name Solve | data: labels
                          'SNSolve':0 # Send Name Solve    | data: ip_addr
             }
@@ -188,6 +192,7 @@ class DNS_node:
         record['class'] = 'IN'
         record['ttl'] = ttl
         record['data'] = data
+        record['start_time'] = int(time.time())
 
         try:
             rds = DNS_node._get_records()
@@ -256,3 +261,6 @@ class DNS_node:
 
             print('client handled.')
             connection.close()
+
+    def update_using_ttl():
+        pass

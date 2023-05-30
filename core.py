@@ -7,6 +7,7 @@ import errors
 TAIL = '!END!'
 DNS_addr = ('192.168.43.147', 5383)
 LEADER_PORT = 8989
+ACK_OK_tuple = tuple(["ACK","OK",TAIL])
 
 
 def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: bool = True, attempts: int = 3, time_to_retry_ms: int = 1000, bytes_flow: int = 1500, timeout=10):
@@ -105,8 +106,8 @@ def get_addr_from_dns(domain:str):
     if not result or len(result) == 0:
         raise errors.ConnectionError("DNS unresponsive.")
     result = pickle.loads(result)
-    h_d_t_list = tuple(["ACK","OK","!END!"])
-    pickled_data = pickle.dumps(h_d_t_list)
+    
+    pickled_data = pickle.dumps(ACK_OK_tuple)
     send_bytes_to(pickled_data,sock,False)
     sock.close()
     
@@ -114,3 +115,25 @@ def get_addr_from_dns(domain:str):
         ip = result[1].split(':')[0]
         port = int(result[1].split(':')[1])
     return (ip,port)
+
+def send_addr_to_dns(domain:str, ip:str, port:int, ttl:int):
+    header = 'AddRec'
+    address = ip+':'+str(port)
+    data = tuple(domain, address, ttl)
+    h_d_t = tuple([header,data,TAIL])
+    pickled_data = pickle.dumps(h_d_t) 
+
+    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+    sock.connect(DNS_addr)
+
+    send_bytes_to(pickled_data,sock,False)
+    result = receive_data_from(sock,waiting_time_ms=3000,iter_n=3)
+    
+    try: 
+        if result[0] == 'ACK' and result[1] == 'OK':
+            return True
+    except:
+        pass
+    return False
+    
+
