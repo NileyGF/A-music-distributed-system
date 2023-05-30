@@ -9,6 +9,7 @@ import errors
 import socket
 import pickle
 import os
+import math
 import multiprocessing
 
 headers = { 'SSList':0,     # Send Songs List 
@@ -55,19 +56,32 @@ class Data_node:
                     f.write(database_bin)
                     self.have_data = True
     
-    def request_songs_list(self):
+    def request_songs_list(self,request):
         if not self.have_data:
             return []
         self.songs_tags_list = dbc.get_aviable_songs(self.db_path)
         return self.songs_tags_list
         
-    def request_song(self):
+    def request_song(self,request):
         if not self.have_data:
             return None
-        pass
-    def request_chunk(self):
+        id_Song = int(request[1])
+        query = "SELECT * from songs where id_S = "+str(id_Song)
+        # row = [id_S, title, artists, genre, duration_ms, chunk_slice]
+        row = dbc.read_data(self.db_path, query)
+        # duration_sec = duration_ms / 1000
+        duration_sec = row[4] / 1000 
+        number_of_chunks:float = duration_sec / row[5]
+        number_of_chunks = math.ceil(number_of_chunks)
+        chunks = dbc.get_n_chunks(0,id_Song,number_of_chunks)
+        return chunks
+    
+    def request_chunk(self,request):
         if not self.have_data:
             return None
+        id_Song = int(request[1][0])
+        ms = int(request[1][1])
+        return dbc.get_a_chunk(ms,id_Song) 
 
 class Router_node:
     def __init__(self,id):

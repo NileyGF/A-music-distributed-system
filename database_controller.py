@@ -85,13 +85,20 @@ def insert_rows(data_base_file_path:str,table_name:str,columns_names:str,row_tup
     """ Insert one or more rows in the specified table, of the specified database.
     'columns_names' is a string of the name of the columns in the table, comma separated.
     'row_tuples_tuple' is a tuple with one or more elements, where each element is a tuple 
-    with the values to insert to the row. Must be ordered in the same fashion as 'colummns_names'
+    with the values to insert to the row. Must be ordered in the same fashion as 'colummns_names'.
+
     Example:
+
         data_base_file_path = 'spotify_db.db'
+
         table_name = 'songs'
+
         columns = 'id_S, title, artists, genre'
+
         rows = ((0, 'This Is Halloween', 'Marilyn Manson', 'Soundtrack'),
+
                 (6, 'Extraordinary Girl', 'Green Day', 'Punk Rock'),
+
                 (11, 'House of the Rising Sun', 'Five Finger Death Punch', 'Rock'))
 
         insert_rows(data_base_file_path, table_name, columns, rows)
@@ -122,12 +129,18 @@ def insert_rows(data_base_file_path:str,table_name:str,columns_names:str,row_tup
 
 def read_data(data_base_file_path:str, query:str="SELECT * from songs"):
     """ Given the path of the database file and a sqlite query, returns all rows corresponding to the query
+        
         Examples:
+                
                 # get all data from 'songs' table:
-                song_list = read_data('spotify_db.db', "SELECT * from songs")
-
+                
+                song_list = read_data('spotify_db.db', "SELECT * from songs")s
+                
+                
                 # get a chunk of song which id is '11_dice_003' :
+                
                 query = "SELECT * from chunks where id_Chunk = '11_dice_003'"
+                
                 chunk = read_data('spotify_db.db', query)
     """
     try:
@@ -149,12 +162,12 @@ def read_data(data_base_file_path:str, query:str="SELECT * from songs"):
 
 
 def get_song_tags(file_path:str):
-    """ Given an .mp3 file path tries to get 'artist', 'title' and 'genre' tags.
+    """ Given an .mp3 file path tries to get 'artist', 'title', 'genre' and 'duration' tags.
         If the .mp3 file does not have all the tags, it will be returned 'Unknown'
 
-        Returns 3 strings values, one for each tag.
+        Returns 4 strings values, one for each tag.
 
-        return title, artist, genre
+        return title, artist, genre, duration
     """
     from mutagen.mp3 import MP3  
     from mutagen.easyid3 import EasyID3  
