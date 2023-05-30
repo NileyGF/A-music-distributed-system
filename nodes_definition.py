@@ -3,18 +3,16 @@ An unique host can have more than one node, allowing it to have more than one ro
 For instance, we must define a "data_base node", "order router"(presumibly the one waiting for orders to redirect them), 
 and others.
 """
-import database_controller
+import database_controller as dbc
 import core
 import errors
 import socket
 import pickle
 import os
 import multiprocessing
-# import threading
-# TAIL = '!END!'
 
 headers = { 'SSList':0,     # Send Songs List 
-            'RSList':0,     #send_songs_tags_list, # Request Songs List
+            'RSList':0,     # Request Songs List
             'Rsong': 0,     # Request song
             'SPList':0,     # Send Providers List
             'Rchunk':0,     # Request chunk
@@ -22,30 +20,63 @@ headers = { 'SSList':0,     # Send Songs List
             'ACK':0,
             'RNSolve':0,    # Request Name Solve 
             'SNSolve':0,    # Send Name Solve
-            'NRServer':0, # New Router Server
-            'NDServer':0, # New Data Server
+            'NRServer':0,   # New Router Server
+            'NDServer':0,   # New Data Server
             # ''
             }
 
+class Data_node:
+    def __init__(self, id, path, database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None):
+        self.id = id
+        # path to read and save data from (must be on os format)
+        self.path = path 
+        # full path of the sqlite database file
+        self.db_path = 'spotify_'+str(self.id)+'.db'
+        self.db_path = os.path.join(self.path,self.db_path)
+        
+        self.have_data = False
+
+        if begin_new_data_base:
+            # start new database and fill it with data from the songs in 'raw_songs_path' 
+            # or leave it empty if 'raw_songs_path' is invalid
+            dbc.create_db(self.db_path)
+            dbc.Create_Songs_Chunks_tables(self.db_path)
+
+            try:
+                songs_list = dbc.songs_list_from_directory(raw_songs_path)
+                dbc.Insert_songs(songs_list,self.db_path)
+                self.have_data = True
+            except Exception as er:
+                print(er)
+        else:
+            # save the database from 'database_bin' into a file if it's a valid value
+            if database_bin != None:
+                with open(self.db_path,'wb') as f:
+                    f.write(database_bin)
+                    self.have_data = True
+    
+    def request_songs_list(self):
+        if not self.have_data:
+            return []
+        self.songs_tags_list = dbc.get_aviable_songs(self.db_path)
+        return self.songs_tags_list
+        
+    def request_song(self):
+        if not self.have_data:
+            return None
+        pass
+    def request_chunk(self):
+        if not self.have_data:
+            return None
+
 class Router_node:
-    def __init__(self):
-        sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        sock.connect(core.DNS_addr)
-        h_d_t_list = tuple(["RNSolve","distpotify.router.leader","!END!"])
-        pickled_data = pickle.dumps(h_d_t_list)
-        core.send_bytes_to(pickled_data,sock,False)
-        result = core.receive_data_from(sock,waiting_time_ms=5000,iter_n=8)
-        if not result or len(result) == 0:
-            raise errors.ConnectionError("DNS unresponsive.")
-        result = pickle.loads(result)
-        h_d_t_list = tuple(["ACK","OK","!END!"])
-        pickled_data = pickle.dumps(h_d_t_list)
-        core.send_bytes_to(pickled_data,sock,False)
-        sock.close()
+    def __init__(self,id):
+        self.id = id
+        ip, port = core.get_addr_from_dns("distpotify.router.leader" )
 
         # now connect to "distpotify.router.leader" 
-        leader_addr = (result[1],core.LEADER_PORT)
-        sock.connect(leader_addr)
+        # leader_addr = (result[1],core.LEADER_PORT)
+        # sock.connect(leader_addr)
 
 
         self.providers_by_song = dict()  # update by time or by event
@@ -58,11 +89,11 @@ class Router_node:
         # fix to connect to a reader node and ask for it
 
         # change to conect to a reading node and ask for the list 
-        self.songs_tags_list = database_controller.get_aviable_songs()
+        self.songs_tags_list = dbc.get_aviable_songs()
         return self.songs_tags_list
     
     def send_songs_tags_list(self,connection:socket.socket):
-        data = database_controller.get_aviable_songs()
+        data = dbc.get_aviable_songs()
         h_d_t_list = tuple(["SSList",data,core.TAIL])
         pickled_data = pickle.dumps(h_d_t_list)
 
@@ -86,7 +117,9 @@ class DNS_node:
         TTL   : Time to live (how long the RR can be cached).Represents the number of seconds that a resolver cache can store the record before discarding it.
         Data  : The actual content of the record, typically consisting of an IP address, domain name, or other relevant identifier."""
     
-    def __init__(self,dns_ip='192.168.43.147',dns_port=5383):
+    def __init__(self,id,dns_ip='192.168.43.147',dns_port=5383):
+        self.id = id
+
         self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((dns_ip,dns_port)) 
@@ -99,7 +132,6 @@ class DNS_node:
         p = multiprocessing.Process(target=self.run,args=())
         p.start()
 
-        
     def run(self):
         client_n = 1
         try:

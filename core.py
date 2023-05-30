@@ -2,6 +2,7 @@ import socket
 import multiprocessing
 import time
 import pickle
+import errors
 
 TAIL = '!END!'
 DNS_addr = ('192.168.43.147',5383)
@@ -86,3 +87,22 @@ def receive_data_from(connection:socket.socket,bytes_flow:int=1024,waiting_time_
     print('Failed iter: ', i, '. Received data = ', len(data))
     return data
 
+def get_addr_from_dns(domain:str):
+    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+    sock.connect(DNS_addr)
+    h_d_t_list = tuple(["RNSolve",domain,TAIL])
+    pickled_data = pickle.dumps(h_d_t_list)
+    send_bytes_to(pickled_data,sock,False)
+    result = receive_data_from(sock,waiting_time_ms=5000,iter_n=8)
+    if not result or len(result) == 0:
+        raise errors.ConnectionError("DNS unresponsive.")
+    result = pickle.loads(result)
+    h_d_t_list = tuple(["ACK","OK","!END!"])
+    pickled_data = pickle.dumps(h_d_t_list)
+    send_bytes_to(pickled_data,sock,False)
+    sock.close()
+    
+    if result[0] == 'SNSolve':
+        ip = result[1].split(':')[0]
+        port = int(result[1].split(':')[1])
+    return (ip,port)

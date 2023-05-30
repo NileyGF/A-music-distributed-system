@@ -8,9 +8,13 @@ SPLIT_SIZE = 10
 def create_db(data_base_file_path:str):
     """ Creates a sqlite database with especified name. The name should have a full existing path
     to where the database must be constructed, including the file name. The extension '.db' is not necessary
+    
     Examples:
+
     'data/sqlite_database.db'
+
     'data/sqlite_database'
+
     'sqlite_database'
     """
     try:
@@ -37,8 +41,11 @@ def create_db(data_base_file_path:str):
 def create_table(data_base_file_path:str, table_name:str, columns_list:list):
     """Createss an sqlite table in the file especified and with the name especified in 'table_name'.
     If 'columns_list' has 0 elements the table won't be created.
+
     The format for columns_list is:
+
     A list of strings where every string is 'column_name type_in_sqlite rest_of_params_to espicify_separated_by_spaces'
+    
     Example:
             [
             'id_S INTEGER PRIMARY KEY',

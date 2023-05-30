@@ -196,14 +196,14 @@ def main():
             os.system("clear")
 
     # 4 processes and 2 thread created.
-    p1 = multiprocessing.Process(target=runServer(Server1, PORT_NUMBERS[0]))
-    p2 = multiprocessing.Process(target=runServer(Server2, PORT_NUMBERS[1]))
-    p3 = multiprocessing.Process(target=runServer(Server3, PORT_NUMBERS[2]))
-    p4 = multiprocessing.Process(target=runServer(Server4, PORT_NUMBERS[3]))
+    p1 = multiprocessing.Process(target=runServer, args=(Server1, PORT_NUMBERS[0]))
+    p2 = multiprocessing.Process(target=runServer, args=(Server2, PORT_NUMBERS[1]))
+    p3 = multiprocessing.Process(target=runServer, args=(Server3, PORT_NUMBERS[2]))
+    p4 = multiprocessing.Process(target=runServer, args=(Server4, PORT_NUMBERS[3]))
     t1 = threading.Thread(target=runServer5)
     t2 = threading.Thread(target=output)
 
-    # p1.run()
+    p1.start()
     time.sleep(0.04)
     p2.start()
     time.sleep(0.04)
