@@ -32,6 +32,7 @@ class Server:
     def __init__(self, serverNumber, serverIpAddr):
         self.serverNumber = serverNumber
         self.serverIpAddr = serverIpAddr
+        self.headers = dict()
         # print("Constructing server...")
 
     # Socket Programming for Server 1 to 4 (it can be more)

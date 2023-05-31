@@ -5,6 +5,7 @@ and others.
 """
 import database_controller as dbc
 import core
+import server_class as serv
 import errors
 import socket
 import pickle
@@ -27,18 +28,29 @@ headers = { 'SSList':0,     # Send Songs List
             'NDServer':0,   # New Data Server
             'ping'    :0,   # ping -_-  
             'echoreply':0,  # ping reply
+            'FailReq':0,    # Failed Request
             # ''
             }
 
-class Data_node:
-    def __init__(self, id, path, database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None):
-        self.id = id
+
+class Data_node(serv.Server):
+    def __init__(self, id, ipAddr, path, database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None, state:int=0):
+        super().__init__(id, ipAddr)
+        self.headers = {'ping':core.send_echo_replay,       # ping -_-  
+                        'RSList':self.request_songs_list,   # Request Songs List
+                        'Rsong': self.request_song,         # Request song
+                        'Rchunk':self.request_chunk,        # Request chunk
+                        'NSong':self.add_song,              # New Song
+                        'DSong':self.remove_song,           # Delete Song
+                        'SynData':self.sync_data_center,    # Synchronize Data Center
+                        }
         # path to read and save data from (must be on os format)
         self.path = path 
         # full path of the sqlite database file
         self.db_path = 'spotify_'+str(self.id)+'.db'
         self.db_path = os.path.join(self.path,self.db_path)
         
+        self.state = state
         self.have_data = False
 
         if begin_new_data_base:
@@ -60,6 +72,15 @@ class Data_node:
                     f.write(database_bin)
                     self.have_data = True
     
+    def add_song(self,song_bin:bytes):
+        pass
+
+    def remove_song(self,song_id:int):
+        pass
+
+    def sync_data_center(self,request):
+        pass
+
     def request_songs_list(self,request):
         if not self.have_data:
             return []
@@ -87,31 +108,58 @@ class Data_node:
         ms = int(request[1][1])
         return dbc.get_a_chunk(ms,id_Song) 
 
-class Router_node:
-    def __init__(self,id):
-        self.id = id
-        ip, port = core.get_addr_from_dns("distpotify.router.leader" )
+class Router_node(serv.Server):
+    def __init__(self, id, ipAddr):
+        super().__init__(id, ipAddr)
+        self.headers = {'ping':core.send_echo_replay,           # ping -_-  
+                        'RSList':self.send_songs_tags_list,    # Request Songs List
+                        'Rsong': self.send_providers_list,      # Request song
+                        'Rchunk':self.send_providers_list,      # Request chunk
+                        }
+        addrs = core.get_addr_from_dns("distpotify.router.leader" )
 
         # now connect to "distpotify.router.leader" 
         # leader_addr = (result[1],core.LEADER_PORT)
         # sock.connect(leader_addr)
 
 
-        self.providers_by_song = dict()  # update by time or by event
-        self.songs_tags_list = list()     # update by time or by event
+        self.providers_by_song = dict()     # update by time or by event
+        self.songs_tags_list = list()       # update by time or by event
 
         self.__get_songs_tags_list()
 
     
     def __get_songs_tags_list(self):
-        # fix to connect to a reader node and ask for it
+        # connect to a data node and ask for it
+        addrs = core.get_addr_from_dns("distpotify.data" )
+        data_servers = []
+        if addrs != None:
+            for addr in addrs:
+                ip = addr.split(':')[0]
+                port = int(addr[1].split(':')[1])
+                data_servers.append((ip,port,addr))
+        data_servers = set(data_servers)
+        req = tuple(['RSList',None,core.TAIL])
+        pickled_data = pickle.dumps(req)
 
-        # change to conect to a reading node and ask for the list 
-        self.songs_tags_list = dbc.get_aviable_songs()
+        for ds in data_servers:
+            sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+            sock.connect((ds[0],ds[1]))
+
+            core.send_bytes_to(pickled_data,sock,False)
+            result = core.receive_data_from(sock,waiting_time_ms=3000,iter_n=3)
+            decoded = pickle.loads(result) 
+            if 'SSList' in decoded:
+                break
+        if 'SSList' in decoded:
+            self.songs_tags_list = decoded[1]
+        else:
+            self.songs_tags_list = None
+
         return self.songs_tags_list
     
     def send_songs_tags_list(self,connection:socket.socket):
-        data = dbc.get_aviable_songs()
+        data = self.__get_songs_tags_list()
         h_d_t_list = tuple(["SSList",data,core.TAIL])
         pickled_data = pickle.dumps(h_d_t_list)
 
@@ -127,7 +175,7 @@ class Router_node:
         if self.providers_by_song.get(song_id):
             providers = self.providers_by_song[song_id]
 
-class DNS_node:
+class DNS_node(serv.Server):
     """DNS server node, with A records. An A record fields are:
         Label : Identifies the owner name of the resource being referenced by the record. It consists of the original parent name plus any additional labels separated by periods (.), ending with a period. For example, "example."
         Type  : Specifies the kind of information contained in the RDATA section of the record. Common values include A (for an IPv4 address), CNAME (for an alias), MX (for mail exchange servers), etc.
@@ -135,17 +183,17 @@ class DNS_node:
         TTL   : Time to live (how long the RR can be cached).Represents the number of seconds that a resolver cache can store the record before discarding it.
         Data  : The actual content of the record, typically consisting of an IP address, domain name, or other relevant identifier."""
     
-    def __init__(self,id,dns_ip='192.168.43.147',dns_port=5383):
-        self.id = id
+    def __init__(self,id,dns_ip=core.DNS_addr[0],dns_port=core.DNS_addr[1]):
+        super().__init__(id, dns_ip)
 
         self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((dns_ip,dns_port)) 
         self.socket.listen(3)
-        self.headers = { 'ACK': 0,
-                         'AddRec':0, # Add Record | data: (labels, ip_addr, ttl) 
-                         'RNSolve':0,# Request Name Solve | data: labels
-                         'SNSolve':0 # Send Name Solve    | data: ip_addr
+        self.headers = {'ping':core.send_echo_replay,   # ping -_-  
+                        'RNSolve':self._name_solve,     # Request Name Solve | data: domain_to_solve
+                        # 'SNSolve':0,                    # Send Name Solve
+                        'AddRec' :0,                    # Add Record | data: (labels, addr, ttl) 
             }
         p = multiprocessing.Process(target=self.run,args=())
         p.start()
@@ -159,7 +207,7 @@ class DNS_node:
                 client_n += 1
                 # queue = multiprocessing.Queue()
                 # queue.put(dict())
-                p = multiprocessing.Process(target=DNS_node._client_handler,args=(conn,client_addr))
+                p = multiprocessing.Process(target=self._client_handler,args=(conn,client_addr))
                 p.start()
                 # p.join(waiting_time_ms/1000)
                 # if p.is_alive():
@@ -172,8 +220,8 @@ class DNS_node:
         finally:
             self.socket.close()
 
-    @staticmethod
-    def _get_records():
+    # @staticmethod
+    def _get_records(self):
         path = "dns_records"
         try:
             files = os.listdir(path)
@@ -183,15 +231,16 @@ class DNS_node:
             print("DNS error. Records not found")
         return data
     
-    @staticmethod
-    def _add_record(labels:str,ttl:int,data):
+    # @staticmethod
+    def _add_record(self,request:tuple):
+        labels, addr, ttl = request
         record = dict()
     
         record['labels'] = labels
         record['type'] = 'A'
         record['class'] = 'IN'
         record['ttl'] = ttl
-        record['data'] = data
+        record['data'] = addr
         record['start_time'] = int(time.time())
 
         try:
@@ -221,9 +270,10 @@ class DNS_node:
 
         return record
     
-    @staticmethod
-    def _name_solve(domain):
+    # @staticmethod
+    def _name_solve(self,request:str):
         # domain_parts = self.domain.split('.')
+        domain = request
         all_records = DNS_node._get_records()
         if not all_records:
             return None
@@ -238,8 +288,8 @@ class DNS_node:
         to_encode = tuple(['SNSolve', datas, core.TAIL])
         return to_encode
     
-    @staticmethod
-    def _client_handler(connection:socket.socket,client_addr):
+    # @staticmethod
+    def _client_handler(self,connection:socket.socket,client_addr):
         try:
             while True:
                 request = core.receive_data_from(connection)
