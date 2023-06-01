@@ -48,7 +48,7 @@ class Server:
         multiprocessing.set_start_method('fork', force=True)
         self.accept_proccess = multiprocessing.Process(target=self.init_socket)
         self.accept_proccess.start()
-        self.accept_proccess.join()
+        # self.accept_proccess.join()
 
     def init_socket(self):
         self.serverSocket = socket(AF_INET, SOCK_STREAM)
@@ -62,7 +62,7 @@ class Server:
             while True:
                 try:                    
                     self.serverSocket.connect(core.DNS_addr)
-                    result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance)],self.serverSocket)
+                    result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance)],address)
                     if result: break
                 except Exception as err:
                     print(err)    
@@ -74,13 +74,13 @@ class Server:
         try:
             while True:                
                 conn, address = self.serverSocket.accept()
-                print('CONNECTED: ',conn)
+                print('CONNECTED: ',address)
                 multiprocessing.set_start_method('fork', force=True)
                 p = multiprocessing.Process(
                     target=self.attend_connection, args=(conn, address))
                 proccesses.append(p)
                 p.start()
-                p.join()
+                # p.join()
         finally:
             self.serverSocket.close()
             for p in proccesses:
@@ -88,7 +88,7 @@ class Server:
                     p.terminate()
                     p.join()
         
-    def assign_role(self, role:nd.Role_node,args:tuple):
+    def assign_role(self,role:nd.Role_node,args:tuple):
         self.role_instance = role(self.serverNumber,*args)
         self.run_server()
 
@@ -220,16 +220,16 @@ def main():
         PORT_NUMBERS.append(port)
 
     # Creating 5 instances of Servers with args as splitSize and serverNumber and common IP Address
-    Server0 = Server(0, SERVER_IP)
+    Server0 = Server(0, '')
     Server0.assign_role(nd.DNS_node,())
-    Server1 = Server(1, SERVER_IP)
-    Server1.assign_role(nd.Data_node,('data_nodes', None, True, 'songs'))
+    # Server1 = Server(1, SERVER_IP)
+    # Server1.assign_role(nd.Data_node,('data_nodes', None, True, 'songs'))
     # Server2 = Server(2, SERVER_IP)
     # Server2.assign_role(nd.Data_node,('data_nodes', None, True, 'songs'))
-    # Server3 = Server(3, SERVER_IP)
-    # Server3.assign_role(nd.Router_node,())
-    Server4 = Server(4, SERVER_IP)
-    Server4.assign_role(nd.Router_node,())
+    Server3 = Server(3, '192.168.43.147')
+    Server3.assign_role(nd.Router_node,())
+    # Server4 = Server(4, SERVER_IP)
+    # Server4.assign_role(nd.Router_node,())
     # Server5 = Server(5, SERVER_IP)
     # Server5.run_server()
 
@@ -326,7 +326,6 @@ def runServer(server, port):
     # # Function to create Server 4 only.
     # def runServer4():
     #     Server4.serverProgram(PORT_NUMBERS[3])
-
 
 def runServer5(Server5, PORT_NUMBERS):
     try:

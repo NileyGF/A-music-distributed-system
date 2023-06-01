@@ -374,15 +374,14 @@ class DNS_node(Role_node):
     
     # @staticmethod
     def add_record(self,request:tuple,connection,address):
-        labels, ttl = request
+        labels, addr, ttl = request
         record = dict()
     
         record['labels'] = labels
         record['type'] = 'A'
         record['class'] = 'IN'
         record['ttl'] = ttl
-        print(address)
-        record['data'] = address
+        record['data'] = addr
         record['start_time'] = int(time.time())
 
         try:
