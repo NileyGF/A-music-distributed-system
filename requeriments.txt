@@ -10,3 +10,9 @@ stat
 threading
 pickle
 struct
+pydub.AudioSegment
+sqlite3
+io
+mutagen.mp3
+mutagen.easyid3
+glob
