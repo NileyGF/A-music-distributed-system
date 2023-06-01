@@ -49,6 +49,7 @@ class Server:
         self.accept_proccess = multiprocessing.Process(target=self.init_socket)
         self.accept_proccess.start()
         # self.accept_proccess.join()
+        return self.accept_proccess
 
     def init_socket(self):
         self.serverSocket = socket(AF_INET, SOCK_STREAM)
@@ -59,13 +60,13 @@ class Server:
         self.serverSocket.listen(5)
         self.liveStatus = "Alive"
         if not isinstance(self.role_instance,nd.DNS_node):
-            while True:
-                try:                    
-                    self.serverSocket.connect(core.DNS_addr)
-                    result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance)],address)
-                    if result: break
-                except Exception as err:
-                    print(err)    
+            # while True:
+            try:                    
+                # self.serverSocket.connect(core.DNS_addr)
+                result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance)],address)
+                # if result: break
+            except Exception as err:
+                print(err)    
 
         # TODO find out if the connection to DNS must/can be closed
         # self.serverSocket.detach()
@@ -90,7 +91,7 @@ class Server:
         
     def assign_role(self,role:nd.Role_node,args:tuple):
         self.role_instance = role(self.serverNumber,*args)
-        self.run_server()
+        return self.run_server()
 
     def attend_connection(self,connection:socket,address:str):
         received = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=5)
@@ -200,36 +201,41 @@ class Server:
 
 def main():
     # --------- Retrieve info from the terminal command ---------
-    # argSize = len(sys.argv)
-    # argList = sys.argv
+    argSize = len(sys.argv)
+    argList = sys.argv
     # print(argSize, argList)
-    argList = ['server_class.py', '--status-interval', '10', '--num-of-servers', '5',
-               '--file-name', 'data.txt', '-server-ip', '0.0.0.0', '8888', '8887', '8886', '8885', '8884']
-    argSize = 14
-    # --------- Constants ---------
-    STATUS_INTERVAL = int(argList[2])
-    NUM_OF_SERVERS = int(argList[4])
-    PORT_NUMBERS = []
-    FILE_NAME = argList[6]
-    SERVER_IP = argList[8]
+    # argList = ['server_class.py', '--status-interval', '10', '--num-of-servers', '5',
+    #            '--file-name', 'data.txt', '-server-ip', '0.0.0.0', '8888', '8887', '8886', '8885', '8884']
+    # argSize = 14
+    # # --------- Constants ---------
+    # STATUS_INTERVAL = int(argList[2])
+    # NUM_OF_SERVERS = int(argList[4])
+    # PORT_NUMBERS = []
+    # FILE_NAME = argList[6]
+    # SERVER_IP = argList[8]
     # PORT_NUMBERS = [8888, 8883, 8884, 8885, 8886]
 
     # --------- Populating PORT_NUMBERS with 'n' number of ports ---------
-    for n in range(9, argSize):
-        port = int(argList[n])
-        PORT_NUMBERS.append(port)
+    # for n in range(9, argSize):
+    #     port = int(argList[n])
+    #     PORT_NUMBERS.append(port)
 
     # Creating 5 instances of Servers with args as splitSize and serverNumber and common IP Address
-    Server0 = Server(0, '')
-    Server0.assign_role(nd.DNS_node,())
-    # Server1 = Server(1, SERVER_IP)
-    # Server1.assign_role(nd.Data_node,('data_nodes', None, True, 'songs'))
-    # Server2 = Server(2, SERVER_IP)
-    # Server2.assign_role(nd.Data_node,('data_nodes', None, True, 'songs'))
-    Server3 = Server(3, '192.168.43.147')
-    Server3.assign_role(nd.Router_node,())
-    # Server4 = Server(4, SERVER_IP)
-    # Server4.assign_role(nd.Router_node,())
+    if argList[2] == '0':
+        Server0 = Server(0, argList[3])
+        p0 = Server0.assign_role(nd.DNS_node,())
+    elif argList[2] == '1':
+        Server1 = Server(1, argList[3])
+        p1 = Server1.assign_role(nd.Data_node,('data_nodes', None, False, 'songs'))
+    elif argList[2] == '2':
+        Server2 = Server(2, argList[3])
+        p2 = Server2.assign_role(nd.Data_node,('data_nodes', None, True, 'songs'))
+    elif argList[2] == '3':
+        Server3 = Server(3, argList[3])
+        p3 = Server3.assign_role(nd.Router_node,())
+    elif argList[2] == '4':
+        Server4 = Server(4, argList[3])
+        p4 = Server4.assign_role(nd.Router_node,())
     # Server5 = Server(5, SERVER_IP)
     # Server5.run_server()
 
@@ -282,32 +288,16 @@ def main():
                 print("Wrong input, try again..")
             os.system("clear")
 
-    # # 4 processes and 2 thread created.
-    # p1 = multiprocessing.Process(target=runServer, args=(Server1, PORT_NUMBERS[0]))
-    # p2 = multiprocessing.Process(target=runServer, args=(Server2, PORT_NUMBERS[1]))
-    # p3 = multiprocessing.Process(target=runServer, args=(Server3, PORT_NUMBERS[2]))
-    # p4 = multiprocessing.Process(target=runServer, args=(Server4, PORT_NUMBERS[3]))
-    # t1 = threading.Thread(target=runServer5)
-    # t2 = threading.Thread(target=output)
-
-    # p1.start()
-    # time.sleep(0.04)
-    # p2.start()
-    # time.sleep(0.04)
-    # p3.start()
-    # time.sleep(0.04)
-    # p4.start()
-    # time.sleep(0.04)
-    # t1.start()
-    # time.sleep(0.04)
-    # t2.start()
-
-    # p1.join()
-    # p2.join()
-    # p3.join()
-    # p4.join()
-    # t1.join()
-    # t2.join()
+    if argList[2] == '0':
+        p0.join()
+    elif argList[2] == '1':
+        p1.join()
+    elif argList[2] == '2':
+        p2.join()
+    elif argList[2] == '3':
+        p3.join()
+    elif argList[2] == '4':
+        p4.join()
 
     # Function to create Server 1
 

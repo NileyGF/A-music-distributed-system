@@ -84,6 +84,9 @@ class Data_node(Role_node):
                 with open(self.db_path,'wb') as f:
                     f.write(database_bin)
                     self.have_data = True
+
+            # TODO remove
+            self.have_data = True
     
     def have_song(self,song_id:int,connection,address):
         query = "SELECT * from songs where id_S = "+str(song_id)
@@ -122,7 +125,7 @@ class Data_node(Role_node):
         encoded = pickle.dumps(tuple(['SSList',self.songs_tags_list,core.TAIL]))
         state, _ = core.send_bytes_to(encoded,connection,False)
         if state == 'OK': 
-            result = core.receive_data_from(connection)
+            result = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=30)
             decoded = pickle.loads(result)
             try: 
                 if 'ACK' in decoded:
@@ -213,9 +216,9 @@ class Router_node(Role_node):
         data_servers = []
         if addrs != None:
             for addr in addrs:
-                ip = addr.split(':')[0]
-                port = int(addr[1].split(':')[1])
-                data_servers.append((ip,port,addr))
+                # ip = addr.split(':')[0]
+                # port = int(addr[1].split(':')[1])
+                data_servers.append(addr)
 
         data_servers = set(data_servers)
         req = tuple(['RSList',None,core.TAIL])
@@ -223,13 +226,17 @@ class Router_node(Role_node):
 
         for ds in data_servers:
             sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-            sock.connect((ds[0],ds[1]))
+            sock.connect(ds)
 
             core.send_bytes_to(pickled_data,sock,False)
-            result = core.receive_data_from(sock,waiting_time_ms=3000,iter_n=3)
+            result = core.receive_data_from(sock,waiting_time_ms=3000,iter_n=33)
             decoded = pickle.loads(result) 
             if 'SSList' in decoded:
                 break
+        encoded = pickle.dumps(core.ACK_OK_tuple)
+        state, _ = core.send_bytes_to(encoded,sock,False)
+        # if state == 'OK': return True
+        # return False
         if 'SSList' in decoded:
             self.songs_tags_list = decoded[1]
         else:
@@ -259,7 +266,7 @@ class Router_node(Role_node):
                     state, _ = core.send_bytes_to(pickled_data,sock,False)
                     sock.close()
 
-                    if state == 'OK':
+                    if state == 'OK' and decoded[1]:
                         #  data_server is a provider of the song
                         existed = False
                         for prov in self.existing_providers:
@@ -281,8 +288,11 @@ class Router_node(Role_node):
                 # for every provider, if still exists (is connected) keep it
                 if prov in self.existing_providers:
                     self.providers_by_song[song_id] += [prov]
-
-        return random.sample(self.providers_by_song[song_id],min(3,len(self.providers_by_song[song_id])))
+        sampl = random.sample(self.providers_by_song[song_id],min(3,len(self.providers_by_song[song_id])))
+        to_send =[]
+        for prov in sampl:
+            to_send.append(prov.address)
+        return to_send
     
     def __update_alive_providers(self):
         pass
@@ -293,6 +303,7 @@ class Router_node(Role_node):
         encoded = pickle.dumps(response)
 
         state = core.send_bytes_to(encoded,connection,False)
+        
         if state [0] == "OK":
             result = core.receive_data_from(connection)
             decoded = pickle.loads(result)

@@ -5,7 +5,7 @@ import pickle
 import errors
 
 # Addresses
-DNS_addr = ('0.0.0.0', 5353)
+DNS_addr = ('192.168.43.161', 5353)
 # LEADER_PORT = 8989
 DATA_PORT = 7777
 ROUTER_PORT = 8888
@@ -38,7 +38,7 @@ def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: 
                 sent = connection.send(payload[start: end])
                 total_sent += sent
                 start += sent
-                print("\nSent %d/%d bytes" % (total_sent, len(payload)))
+                print("\nSent %d/%d bytes" % (total_sent, len(payload)), connection)
             ok = True
             break
         except socket.error as error:
@@ -125,7 +125,7 @@ def get_addr_from_dns(domain:str):
 def send_addr_to_dns(domain:str, address:tuple, ttl:int=60):
 
     # address = ip + ':'+str(port)
-    data = tuple(domain, address, ttl)
+    data = tuple([domain, address, ttl])
     messag = tuple(['AddRec',data,TAIL])
     encoded = pickle.dumps(messag) 
 
@@ -137,6 +137,7 @@ def send_addr_to_dns(domain:str, address:tuple, ttl:int=60):
     decoded = pickle.loads(result)
     try: 
         if decoded[0] == 'ACK' and decoded[1] == 'OK':
+            print('DNS added record success')
             return True
     except:
         pass
