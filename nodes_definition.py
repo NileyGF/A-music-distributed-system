@@ -5,12 +5,12 @@ and others.
 """
 import database_controller as dbc
 import core
-# import server_class as serv
 import errors
 import socket
 import pickle
 import os
 import math
+import random
 import time
 import multiprocessing
 
@@ -20,6 +20,8 @@ headers = { 'SSList':0,     # Send Songs List
             'SPList':0,     # Send Providers List
             'Rchunk':0,     # Request chunk
             'Schunk':0,     # Send chunk
+            'RHSong':0,     # Request Have Song
+            'SHSong':0,     # Send Have Song
             'ACK':0,
             'RNSolve':0,    # Request Name Solve 
             'SNSolve':0,    # Send Name Solve
@@ -28,7 +30,7 @@ headers = { 'SSList':0,     # Send Songs List
             'NDServer':0,   # New Data Server
             'ping'    :0,   # ping -_-  
             'echoreply':0,  # ping reply
-            'FailedReq':0,    # Failed Request
+            'FailedReq':0,  # Failed Request
             # ''
             }
 
@@ -50,6 +52,7 @@ class Data_node(Role_node):
                         'RSList':self.request_songs_list,       # Request Songs List
                         'Rsong' :self.request_song,             # Request song
                         'Rchunk':self.request_chunk,            # Request chunk
+                        'RHSong':self.have_song,                # Request Have Song
                         'NSong' :self.add_song,                 # New Song
                         'DSong' :self.remove_song,              # Delete Song
                         'SynData':self.sync_data_center,        # Synchronize Data Center
@@ -82,6 +85,27 @@ class Data_node(Role_node):
                     f.write(database_bin)
                     self.have_data = True
     
+    def have_song(self,song_id:int,connection,address):
+        query = "SELECT * from songs where id_S = "+str(song_id)
+        # row = [id_S, title, artists, genre, duration_ms, chunk_slice]
+        row = dbc.read_data(self.db_path, query)
+        print(row)
+        if row != None and len(row) > 0:
+            encoded = pickle.dumps(tuple(['SHSong',True,core.TAIL]))
+        else:
+            encoded = pickle.dumps(tuple(['SHSong',False,core.TAIL]))
+
+        state, _ = core.send_bytes_to(encoded,connection,False)
+        if state == 'OK': 
+            result = core.receive_data_from(connection)
+            decoded = pickle.loads(result)
+            try: 
+                if 'ACK' in decoded:
+                    return True
+            except:
+                pass
+        return False
+
     def add_song(self,song_bin:bytes,connection,address):
         pass
 
@@ -156,6 +180,14 @@ class Data_node(Role_node):
             return False
 
 class Router_node(Role_node):
+    class _providers:
+        def __init__(self,address,type):
+            self.address = address
+            self.type = type
+            self.used = 0
+        def use(self):
+            self.used +=1
+
     def __init__(self,server_id=None):
         self.headers = {'ping':core.send_echo_replay,           # ping -_-  
                         'RSList':self.send_songs_tags_list,    # Request Songs List
@@ -170,6 +202,7 @@ class Router_node(Role_node):
 
 
         self.providers_by_song = dict()     # update by time or by event
+        self.existing_providers = list()
         self.songs_tags_list = list()       # update by time or by event
 
         # self.__get_songs_tags_list()
@@ -205,6 +238,53 @@ class Router_node(Role_node):
         return self.songs_tags_list
     
     def __get_best_providers(self,song_id):
+        # TODO self.__update_alive_providers()
+        old_prov = self.providers_by_song.get(song_id)
+        self.providers_by_song[song_id] = []
+        if not old_prov:
+            # no one have the song, go and ask DNS for the data servers
+            addresses = core.get_addr_from_dns('distpotify.data')
+            for data_server in addresses:
+                try:
+                    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                    sock.connect(data_server)
+                    encoded = pickle.dumps(tuple(['RHSong',song_id,core.TAIL]))
+                    state, _ = core.send_bytes_to(encoded,sock,False)
+                    if state != 'OK':
+                        continue
+                    result = core.receive_data_from(sock)
+                    decoded = pickle.loads(result)
+
+                    pickled_data = pickle.dumps(core.ACK_OK_tuple)
+                    state, _ = core.send_bytes_to(pickled_data,sock,False)
+                    sock.close()
+
+                    if state == 'OK':
+                        #  data_server is a provider of the song
+                        existed = False
+                        for prov in self.existing_providers:
+                            if prov.address == data_server:
+                                # already knew that server
+                                existed = True
+                                self.providers_by_song[song_id] += [prov]
+                        if not existed:
+                            # did'n knew that server
+                            new_prov = Router_node._providers(data_server,'data server')
+                            self.existing_providers.append(new_prov)
+                            self.providers_by_song[song_id] += [new_prov]
+                except Exception as er:
+                    print(er)
+                    continue
+            
+        else:
+            for prov in old_prov:
+                # for every provider, if still exists (is connected) keep it
+                if prov in self.existing_providers:
+                    self.providers_by_song[song_id] += [prov]
+
+        return random.sample(self.providers_by_song[song_id],min(3,len(self.providers_by_song[song_id])))
+    
+    def __update_alive_providers(self):
         pass
 
     def send_songs_tags_list(self,request_data,connection,address):
@@ -306,7 +386,7 @@ class DNS_node(Role_node):
         record['start_time'] = int(time.time())
 
         try:
-            rds = DNS_node._get_records()
+            rds = self._get_records()
             if not isinstance(rds,dict):
                 rds = dict()
         except:
@@ -338,7 +418,7 @@ class DNS_node(Role_node):
     
     # @staticmethod
     def name_solve(self,domain:str,connection,address):
-        all_records = DNS_node._get_records()
+        all_records = self._get_records()
         if not all_records:
             return False
         try:

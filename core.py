@@ -53,7 +53,7 @@ def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: 
             response = receive_data_from(connection, bytes_flow, 5000, 3)
             return "OK", response
         else:
-            "OK", None
+            return "OK", None
     else:
         return "Connection Lost Error!", None
 
@@ -142,9 +142,10 @@ def send_addr_to_dns(domain:str, server_sock:socket.socket, ttl:int=60):
         pass
     return False
     
-def send_ping_to(address:str):
+def send_ping_to(address:str,data=None):
     """Send a ping message to address <ip:port>"""
-    pickled_data = pickle.dumps(PING_tuple)
+    messag = tuple([PING_tuple[0],data,PING_tuple[2]])
+    pickled_data = pickle.dumps(messag)
     ip = address.split(':')[0]
     port = int(address[1].split(':')[1])
     sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)

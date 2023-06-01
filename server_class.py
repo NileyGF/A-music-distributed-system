@@ -36,23 +36,39 @@ class Server:
         self.role_instance = nd.Role_node(self.serverNumber)
         queue = multiprocessing.Queue()
         queue.put(dict())
-        self.accept_proccess = multiprocessing.Process(target=self.init_socket, args=(queue))
-        self.accept_proccess.start()
+        multiprocessing.set_start_method('fork', force=True)
+        self.accept_proccess = multiprocessing.Process(target=self.init_socket)
+        # self.accept_proccess.start()
         # print("Constructing server...")
 
-    def init_socket(self,queue):
+    def run_server(self):
+        if self.accept_proccess.is_alive():
+            self.accept_proccess.terminate()
+            self.accept_proccess.join()
+        multiprocessing.set_start_method('fork', force=True)
+        self.accept_proccess = multiprocessing.Process(target=self.init_socket)
+        self.accept_proccess.start()
+        self.accept_proccess.join()
+
+    def init_socket(self):
         self.serverSocket = socket(AF_INET, SOCK_STREAM)
         self.serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-        self.serverSocket.bind((self.serverIpAddr, nd.ports_by_role[str(self.role_instance)]))
+        address = (self.serverIpAddr, nd.ports_by_role[str(self.role_instance)])
+        print(address)
+        self.serverSocket.bind(address)
         self.serverSocket.listen(5)
         self.liveStatus = "Alive"
-        
-        self.serverSocket.connect(core.DNS_addr)
-        while True:
-            result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance)],self.serverSocket)
-            if result: break
+        if not isinstance(self.role_instance,nd.DNS_node):
+            while True:
+                try:                    
+                    self.serverSocket.connect(core.DNS_addr)
+                    result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance)],self.serverSocket)
+                    if result: break
+                except Exception as err:
+                    print(err)    
+
         # TODO find out if the connection to DNS must/can be closed
-        # self.serverSocket.detach
+        # self.serverSocket.detach()
 
         proccesses = []
         try:
@@ -64,6 +80,7 @@ class Server:
                     target=self.attend_connection, args=(conn, address))
                 proccesses.append(p)
                 p.start()
+                p.join()
         finally:
             self.serverSocket.close()
             for p in proccesses:
@@ -71,12 +88,9 @@ class Server:
                     p.terminate()
                     p.join()
         
-    def assign_role(self, role:nd.Role_node,args:list):
-        self.role_instance = role(*args)
-        if self.accept_proccess.is_alive():
-            self.accept_proccess.terminate()
-            self.accept_proccess.join()
-        self.accept_proccess.start()
+    def assign_role(self, role:nd.Role_node,args:tuple):
+        self.role_instance = role(self.serverNumber,*args)
+        self.run_server()
 
     def attend_connection(self,connection:socket,address:str):
         received = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=5)
@@ -91,10 +105,14 @@ class Server:
                 response = handler(decoded[1],connection,address)
                 # encoded = pickle.dumps(response)
                 # sended, _ = core.send_bytes_to(encoded,connection,False)
-        except:
-            pass        
-        
-        connection.close()
+        except Exception as err:
+            print(err) 
+            response = core.FAILED_REQ
+            encoded = pickle.dumps(response)
+            sended, _ = core.send_bytes_to(encoded,connection,False)
+                 
+        finally:
+            connection.close()
 
     # Socket Programming for Server 1 to 4 (it can be more)
     def serverProgram(self, chosenPort):
@@ -202,11 +220,18 @@ def main():
         PORT_NUMBERS.append(port)
 
     # Creating 5 instances of Servers with args as splitSize and serverNumber and common IP Address
+    Server0 = Server(0, SERVER_IP)
+    Server0.assign_role(nd.DNS_node,())
     Server1 = Server(1, SERVER_IP)
-    Server2 = Server(2, SERVER_IP)
-    Server3 = Server(3, SERVER_IP)
+    Server1.assign_role(nd.Data_node,('data_nodes', None, True, 'songs'))
+    # Server2 = Server(2, SERVER_IP)
+    # Server2.assign_role(nd.Data_node,('data_nodes', None, True, 'songs'))
+    # Server3 = Server(3, SERVER_IP)
+    # Server3.assign_role(nd.Router_node,())
     Server4 = Server(4, SERVER_IP)
-    Server5 = Server(5, SERVER_IP)
+    Server4.assign_role(nd.Router_node,())
+    # Server5 = Server(5, SERVER_IP)
+    # Server5.run_server()
 
     # Server 1 and 2 are responsible of DB updates. (Ask to Niley)
 
@@ -257,32 +282,32 @@ def main():
                 print("Wrong input, try again..")
             os.system("clear")
 
-    # 4 processes and 2 thread created.
-    p1 = multiprocessing.Process(target=runServer, args=(Server1, PORT_NUMBERS[0]))
-    p2 = multiprocessing.Process(target=runServer, args=(Server2, PORT_NUMBERS[1]))
-    p3 = multiprocessing.Process(target=runServer, args=(Server3, PORT_NUMBERS[2]))
-    p4 = multiprocessing.Process(target=runServer, args=(Server4, PORT_NUMBERS[3]))
-    t1 = threading.Thread(target=runServer5)
-    t2 = threading.Thread(target=output)
+    # # 4 processes and 2 thread created.
+    # p1 = multiprocessing.Process(target=runServer, args=(Server1, PORT_NUMBERS[0]))
+    # p2 = multiprocessing.Process(target=runServer, args=(Server2, PORT_NUMBERS[1]))
+    # p3 = multiprocessing.Process(target=runServer, args=(Server3, PORT_NUMBERS[2]))
+    # p4 = multiprocessing.Process(target=runServer, args=(Server4, PORT_NUMBERS[3]))
+    # t1 = threading.Thread(target=runServer5)
+    # t2 = threading.Thread(target=output)
 
-    p1.start()
-    time.sleep(0.04)
-    p2.start()
-    time.sleep(0.04)
-    p3.start()
-    time.sleep(0.04)
-    p4.start()
-    time.sleep(0.04)
-    t1.start()
-    time.sleep(0.04)
-    t2.start()
+    # p1.start()
+    # time.sleep(0.04)
+    # p2.start()
+    # time.sleep(0.04)
+    # p3.start()
+    # time.sleep(0.04)
+    # p4.start()
+    # time.sleep(0.04)
+    # t1.start()
+    # time.sleep(0.04)
+    # t2.start()
 
-    p1.join()
-    p2.join()
-    p3.join()
-    p4.join()
-    t1.join()
-    t2.join()
+    # p1.join()
+    # p2.join()
+    # p3.join()
+    # p4.join()
+    # t1.join()
+    # t2.join()
 
     # Function to create Server 1
 
