@@ -122,18 +122,18 @@ def get_addr_from_dns(domain:str):
     # return (ip,port)
         return result[1]
 
-def send_addr_to_dns(domain:str, ip:str, port:int, ttl:int):
-    header = 'AddRec'
-    address = ip+':'+str(port)
-    data = tuple(domain, address, ttl)
-    h_d_t = tuple([header,data,TAIL])
-    pickled_data = pickle.dumps(h_d_t) 
+def send_addr_to_dns(domain:str, server_sock:socket.socket, ttl:int=60):
 
-    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-    sock.connect(DNS_addr)
+    # address = ip + ':'+str(port)
+    data = tuple(domain, ttl)
+    messag = tuple(['AddRec',data,TAIL])
+    encoded = pickle.dumps(messag) 
 
-    send_bytes_to(pickled_data,sock,False)
-    result = receive_data_from(sock,waiting_time_ms=3000,iter_n=3)
+    # sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+    server_sock.connect(DNS_addr)
+
+    state, _ = send_bytes_to(encoded,server_sock,False)
+    result = receive_data_from(server_sock,waiting_time_ms=3000,iter_n=3)
     decoded = pickle.loads(result)
     try: 
         if decoded[0] == 'ACK' and decoded[1] == 'OK':

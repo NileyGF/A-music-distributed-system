@@ -33,7 +33,7 @@ class Server:
     def __init__(self, serverNumber, serverIpAddr):
         self.serverNumber = serverNumber
         self.serverIpAddr = serverIpAddr
-        self.role_instance = nd.Role_node()
+        self.role_instance = nd.Role_node(self.serverNumber)
         queue = multiprocessing.Queue()
         queue.put(dict())
         self.accept_proccess = multiprocessing.Process(target=self.init_socket, args=(queue))
@@ -46,10 +46,17 @@ class Server:
         self.serverSocket.bind((self.serverIpAddr, nd.ports_by_role[str(self.role_instance)]))
         self.serverSocket.listen(5)
         self.liveStatus = "Alive"
+        
+        self.serverSocket.connect(core.DNS_addr)
+        while True:
+            result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance)],self.serverSocket)
+            if result: break
+        # TODO find out if the connection to DNS must/can be closed
+        # self.serverSocket.detach
+
         proccesses = []
         try:
-            while True:
-                
+            while True:                
                 conn, address = self.serverSocket.accept()
                 print('CONNECTED: ',conn)
                 multiprocessing.set_start_method('fork', force=True)
@@ -66,7 +73,6 @@ class Server:
         
     def assign_role(self, role:nd.Role_node,args:list):
         self.role_instance = role(*args)
-        # TODO update to DNS
         if self.accept_proccess.is_alive():
             self.accept_proccess.terminate()
             self.accept_proccess.join()
@@ -89,7 +95,7 @@ class Server:
             pass        
         
         connection.close()
-        
+
     # Socket Programming for Server 1 to 4 (it can be more)
     def serverProgram(self, chosenPort):
         print("Im ", chosenPort)

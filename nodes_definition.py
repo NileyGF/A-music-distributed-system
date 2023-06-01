@@ -35,18 +35,17 @@ headers = { 'SSList':0,     # Send Songs List
 
 class Role_node():
     """base class for all roles"""
-    def __init__(self):
+    def __init__(self,server_id=None):
         self.headers = {'ping':core.send_echo_replay}
     def __str__(self) -> str:
         return self.__class__.__name__
 
 class Data_node(Role_node):
-    def __init__(self,server_id=None, path='', database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None, state:int=0):
+    def __init__(self,server_id=None, path='', database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None):
         self.id = server_id
-        try:
-            core.send_addr_to_dns
-        except:
-            pass
+        
+        # core.send_addr_to_dns
+        
         self.headers = {'ping'  :core.send_echo_replay,         # ping -_-  
                         'RSList':self.request_songs_list,       # Request Songs List
                         'Rsong' :self.request_song,             # Request song
@@ -61,7 +60,7 @@ class Data_node(Role_node):
         self.db_path = 'spotify_'+str(self.id)+'.db'
         self.db_path = os.path.join(self.path,self.db_path)
         
-        self.state = state
+        # self.state = state
         self.have_data = False
 
         if begin_new_data_base:
@@ -157,7 +156,7 @@ class Data_node(Role_node):
             return False
 
 class Router_node(Role_node):
-    def __init__(self):
+    def __init__(self,server_id=None):
         self.headers = {'ping':core.send_echo_replay,           # ping -_-  
                         'RSList':self.send_songs_tags_list,    # Request Songs List
                         'Rsong': self.send_providers_list,      # Request song
@@ -247,7 +246,7 @@ class DNS_node(Role_node):
         TTL   : Time to live (how long the RR can be cached).Represents the number of seconds that a resolver cache can store the record before discarding it.
         Data  : The actual content of the record, typically consisting of an IP address, domain name, or other relevant identifier."""
     
-    def __init__(self,dns_ip=core.DNS_addr[0],dns_port=core.DNS_addr[1]):
+    def __init__(self,server_id=None): #,dns_ip=core.DNS_addr[0],dns_port=core.DNS_addr[1]):
         
         # self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         # self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -295,14 +294,15 @@ class DNS_node(Role_node):
     
     # @staticmethod
     def add_record(self,request:tuple,connection,address):
-        labels, addr, ttl = request
+        labels, ttl = request
         record = dict()
     
         record['labels'] = labels
         record['type'] = 'A'
         record['class'] = 'IN'
         record['ttl'] = ttl
-        record['data'] = addr
+        print(address)
+        record['data'] = address
         record['start_time'] = int(time.time())
 
         try:
@@ -322,7 +322,7 @@ class DNS_node(Role_node):
         try:
             files = os.listdir(path)
             if not files or len(files) == 0:
-                with open(os.path.join(path,labels),'wb') as f:
+                with open(os.path.join(path,'rcrds.bin'),'wb') as f:
                     pickle.dump(rds,f)
             else: # TODO change files[0]
                 with open(os.path.join(path,files[0]),'wb') as f:
@@ -390,3 +390,7 @@ ports_by_role = { str(Role_node())  : core.NONE_PORT,
                   str(Data_node())  : core.DATA_PORT,
                   str(Router_node()): core.ROUTER_PORT,
                   str(DNS_node())   : core.DNS_PORT}
+domains_by_role = {str(Role_node()) : 'distpotify.no_role',
+                  str(Data_node())  : 'distpotify.data',
+                  str(Router_node()): 'distpotify.router',
+                  str(DNS_node())   : ''}
