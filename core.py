@@ -4,12 +4,19 @@ import time
 import pickle
 import errors
 
-TAIL = '!END!'
-DNS_addr = ('192.168.43.147', 5383)
+# Addresses
+DNS_addr = ('192.168.43.147', 5353)
 LEADER_PORT = 8989
+DATA_PORT = 7777
+ROUTER_PORT = 8888
+DNS_PORT = 5353
+NONE_PORT = 6789
+# Messages
+TAIL = '!END!'
 ACK_OK_tuple = tuple(["ACK","OK",TAIL])
 PING_tuple = tuple(['ping',None,TAIL])
 ECHO_REPLAY = tuple(['echoreplay',None,TAIL])
+FAILED_REQ = tuple(['FailedReq',None,TAIL])
 
 
 def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: bool = True, attempts: int = 3, time_to_retry_ms: int = 1000, bytes_flow: int = 1500, timeout=10):

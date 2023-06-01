@@ -8,8 +8,9 @@ import os
 from os import path
 from stat import *  # ST_SIZE etc
 import threading
-import core
 import pickle
+import core
+import nodes_definition as nd
 
 
 class Server:
@@ -32,9 +33,63 @@ class Server:
     def __init__(self, serverNumber, serverIpAddr):
         self.serverNumber = serverNumber
         self.serverIpAddr = serverIpAddr
-        self.headers = dict()
+        self.role_instance = nd.Role_node()
+        queue = multiprocessing.Queue()
+        queue.put(dict())
+        self.accept_proccess = multiprocessing.Process(target=self.init_socket, args=(queue))
+        self.accept_proccess.start()
         # print("Constructing server...")
 
+    def init_socket(self,queue):
+        self.serverSocket = socket(AF_INET, SOCK_STREAM)
+        self.serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        self.serverSocket.bind((self.serverIpAddr, nd.ports_by_role[str(self.role_instance)]))
+        self.serverSocket.listen(5)
+        self.liveStatus = "Alive"
+        proccesses = []
+        try:
+            while True:
+                
+                conn, address = self.serverSocket.accept()
+                print('CONNECTED: ',conn)
+                multiprocessing.set_start_method('fork', force=True)
+                p = multiprocessing.Process(
+                    target=self.attend_connection, args=(conn, address))
+                proccesses.append(p)
+                p.start()
+        finally:
+            self.serverSocket.close()
+            for p in proccesses:
+                if p.is_alive():
+                    p.terminate()
+                    p.join()
+        
+    def assign_role(self, role:nd.Role_node,args:list):
+        self.role_instance = role(*args)
+        # TODO update to DNS
+        if self.accept_proccess.is_alive():
+            self.accept_proccess.terminate()
+            self.accept_proccess.join()
+        self.accept_proccess.start()
+
+    def attend_connection(self,connection:socket,address:str):
+        received = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=5)
+        try:
+            decoded = pickle.loads(received)
+            if not self.role_instance.headers.get(decoded[0]):
+                response = core.FAILED_REQ
+                encoded = pickle.dumps(response)
+                sended, _ = core.send_bytes_to(encoded,connection,False)
+            else:
+                handler = self.role_instance.headers.get(decoded[0])
+                response = handler(decoded[1],connection,address)
+                # encoded = pickle.dumps(response)
+                # sended, _ = core.send_bytes_to(encoded,connection,False)
+        except:
+            pass        
+        
+        connection.close()
+        
     # Socket Programming for Server 1 to 4 (it can be more)
     def serverProgram(self, chosenPort):
         print("Im ", chosenPort)

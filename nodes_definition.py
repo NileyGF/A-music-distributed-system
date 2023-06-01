@@ -5,7 +5,7 @@ and others.
 """
 import database_controller as dbc
 import core
-import server_class as serv
+# import server_class as serv
 import errors
 import socket
 import pickle
@@ -28,14 +28,25 @@ headers = { 'SSList':0,     # Send Songs List
             'NDServer':0,   # New Data Server
             'ping'    :0,   # ping -_-  
             'echoreply':0,  # ping reply
-            'FailReq':0,    # Failed Request
+            'FailedReq':0,    # Failed Request
             # ''
             }
 
 
-class Data_node(serv.Server):
-    def __init__(self, id, ipAddr, path, database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None, state:int=0):
-        super().__init__(id, ipAddr)
+class Role_node():
+    """base class for all roles"""
+    def __init__(self):
+        self.headers = {'ping':core.send_echo_replay}
+    def __str__(self) -> str:
+        return self.__class__.__name__
+
+class Data_node(Role_node):
+    def __init__(self,server_id=None, path='', database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None, state:int=0):
+        self.id = server_id
+        try:
+            core.send_addr_to_dns
+        except:
+            pass
         self.headers = {'ping':core.send_echo_replay,       # ping -_-  
                         'RSList':self.request_songs_list,   # Request Songs List
                         'Rsong': self.request_song,         # Request song
@@ -87,18 +98,19 @@ class Data_node(serv.Server):
         self.songs_tags_list = dbc.get_aviable_songs(self.db_path)
         return self.songs_tags_list
         
-    def request_song(self,request):
+    def request_song(self,song_id:int):
         if not self.have_data:
             return None
-        id_Song = int(request[1])
-        query = "SELECT * from songs where id_S = "+str(id_Song)
+        query = "SELECT * from songs where id_S = "+str(song_id)
         # row = [id_S, title, artists, genre, duration_ms, chunk_slice]
         row = dbc.read_data(self.db_path, query)
+
         # duration_sec = duration_ms / 1000
         duration_sec = row[4] / 1000 
         number_of_chunks:float = duration_sec / row[5]
         number_of_chunks = math.ceil(number_of_chunks)
-        chunks = dbc.get_n_chunks(0,id_Song,number_of_chunks)
+
+        chunks = dbc.get_n_chunks(0,song_id,number_of_chunks)
         return chunks
     
     def request_chunk(self,request):
@@ -108,15 +120,14 @@ class Data_node(serv.Server):
         ms = int(request[1][1])
         return dbc.get_a_chunk(ms,id_Song) 
 
-class Router_node(serv.Server):
-    def __init__(self, id, ipAddr):
-        super().__init__(id, ipAddr)
+class Router_node(Role_node):
+    def __init__(self):
         self.headers = {'ping':core.send_echo_replay,           # ping -_-  
                         'RSList':self.send_songs_tags_list,    # Request Songs List
                         'Rsong': self.send_providers_list,      # Request song
                         'Rchunk':self.send_providers_list,      # Request chunk
                         }
-        addrs = core.get_addr_from_dns("distpotify.router.leader" )
+        # addrs = core.get_addr_from_dns("distpotify.router.leader" )
 
         # now connect to "distpotify.router.leader" 
         # leader_addr = (result[1],core.LEADER_PORT)
@@ -126,7 +137,7 @@ class Router_node(serv.Server):
         self.providers_by_song = dict()     # update by time or by event
         self.songs_tags_list = list()       # update by time or by event
 
-        self.__get_songs_tags_list()
+        # self.__get_songs_tags_list()
 
     
     def __get_songs_tags_list(self):
@@ -138,6 +149,7 @@ class Router_node(serv.Server):
                 ip = addr.split(':')[0]
                 port = int(addr[1].split(':')[1])
                 data_servers.append((ip,port,addr))
+
         data_servers = set(data_servers)
         req = tuple(['RSList',None,core.TAIL])
         pickled_data = pickle.dumps(req)
@@ -175,7 +187,7 @@ class Router_node(serv.Server):
         if self.providers_by_song.get(song_id):
             providers = self.providers_by_song[song_id]
 
-class DNS_node(serv.Server):
+class DNS_node(Role_node):
     """DNS server node, with A records. An A record fields are:
         Label : Identifies the owner name of the resource being referenced by the record. It consists of the original parent name plus any additional labels separated by periods (.), ending with a period. For example, "example."
         Type  : Specifies the kind of information contained in the RDATA section of the record. Common values include A (for an IPv4 address), CNAME (for an alias), MX (for mail exchange servers), etc.
@@ -183,20 +195,19 @@ class DNS_node(serv.Server):
         TTL   : Time to live (how long the RR can be cached).Represents the number of seconds that a resolver cache can store the record before discarding it.
         Data  : The actual content of the record, typically consisting of an IP address, domain name, or other relevant identifier."""
     
-    def __init__(self,id,dns_ip=core.DNS_addr[0],dns_port=core.DNS_addr[1]):
-        super().__init__(id, dns_ip)
-
-        self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind((dns_ip,dns_port)) 
-        self.socket.listen(3)
+    def __init__(self,dns_ip=core.DNS_addr[0],dns_port=core.DNS_addr[1]):
+        
+        # self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        # self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # self.socket.bind((dns_ip,dns_port)) 
+        # self.socket.listen(3)
         self.headers = {'ping':core.send_echo_replay,   # ping -_-  
                         'RNSolve':self._name_solve,     # Request Name Solve | data: domain_to_solve
                         # 'SNSolve':0,                    # Send Name Solve
                         'AddRec' :0,                    # Add Record | data: (labels, addr, ttl) 
             }
-        p = multiprocessing.Process(target=self.run,args=())
-        p.start()
+        # p = multiprocessing.Process(target=self.run,args=())
+        # p.start()
 
     def run(self):
         client_n = 1
@@ -314,3 +325,8 @@ class DNS_node(serv.Server):
 
     def update_using_ttl():
         pass
+
+ports_by_role = { str(Role_node())  : core.NONE_PORT,
+                  str(Data_node())  : core.DATA_PORT,
+                  str(Router_node()): core.ROUTER_PORT,
+                  str(DNS_node())   : core.DNS_PORT}
