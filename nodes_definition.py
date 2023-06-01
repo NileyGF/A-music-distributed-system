@@ -47,13 +47,13 @@ class Data_node(Role_node):
             core.send_addr_to_dns
         except:
             pass
-        self.headers = {'ping':core.send_echo_replay,       # ping -_-  
-                        'RSList':self.request_songs_list,   # Request Songs List
-                        'Rsong': self.request_song,         # Request song
-                        'Rchunk':self.request_chunk,        # Request chunk
-                        'NSong':self.add_song,              # New Song
-                        'DSong':self.remove_song,           # Delete Song
-                        'SynData':self.sync_data_center,    # Synchronize Data Center
+        self.headers = {'ping'  :core.send_echo_replay,         # ping -_-  
+                        'RSList':self.request_songs_list,       # Request Songs List
+                        'Rsong' :self.request_song,             # Request song
+                        'Rchunk':self.request_chunk,            # Request chunk
+                        'NSong' :self.add_song,                 # New Song
+                        'DSong' :self.remove_song,              # Delete Song
+                        'SynData':self.sync_data_center,        # Synchronize Data Center
                         }
         # path to read and save data from (must be on os format)
         self.path = path 
@@ -83,22 +83,32 @@ class Data_node(Role_node):
                     f.write(database_bin)
                     self.have_data = True
     
-    def add_song(self,song_bin:bytes):
+    def add_song(self,song_bin:bytes,connection,address):
         pass
 
-    def remove_song(self,song_id:int):
+    def remove_song(self,song_id:int,connection,address):
         pass
 
-    def sync_data_center(self,request):
+    def sync_data_center(self,request_data,connection,address):
         pass
 
-    def request_songs_list(self,request):
+    def request_songs_list(self,request_data,connection,address):
         if not self.have_data:
             return []
         self.songs_tags_list = dbc.get_aviable_songs(self.db_path)
-        return self.songs_tags_list
+        encoded = pickle.dumps(tuple(['SSList',self.songs_tags_list,core.TAIL]))
+        state, _ = core.send_bytes_to(encoded,connection,False)
+        if state == 'OK': 
+            result = core.receive_data_from(connection)
+            decoded = pickle.loads(result)
+            try: 
+                if 'ACK' in decoded:
+                    return True
+            except:
+                pass
+        return False
         
-    def request_song(self,song_id:int):
+    def request_song(self,song_id:int,connection,address):
         if not self.have_data:
             return None
         query = "SELECT * from songs where id_S = "+str(song_id)
@@ -111,14 +121,40 @@ class Data_node(Role_node):
         number_of_chunks = math.ceil(number_of_chunks)
 
         chunks = dbc.get_n_chunks(0,song_id,number_of_chunks)
-        return chunks
+
+        for ch in chunks:
+            try:
+                encoded = pickle.dumps(tuple(['Schunk',ch,core.TAIL]))
+                state, _ = core.send_bytes_to(encoded,connection,False)
+                if state == 'OK': 
+                    result = core.receive_data_from(connection)
+                    decoded = pickle.loads(result)
+                    if 'ACK' in decoded:
+                        continue
+                return False
+            except Exception as er:
+                print(er)
+                return False
+        return True
     
-    def request_chunk(self,request):
+    def request_chunk(self,request_data,connection,address):
         if not self.have_data:
-            return None
-        id_Song = int(request[1][0])
-        ms = int(request[1][1])
-        return dbc.get_a_chunk(ms,id_Song) 
+            return False
+        id_Song = int(request_data[0])
+        ms = int(request_data[1])
+        chunk = dbc.get_a_chunk(ms,id_Song) 
+        try:
+            encoded = pickle.dumps(tuple(['Schunk',chunk,core.TAIL]))
+            state, _ = core.send_bytes_to(encoded,connection,False)
+            if state == 'OK': 
+                result = core.receive_data_from(connection)
+                decoded = pickle.loads(result)
+                if 'ACK' in decoded:
+                    return True
+            return False
+        except Exception as er:
+            print(er)
+            return False
 
 class Router_node(Role_node):
     def __init__(self):
@@ -139,7 +175,6 @@ class Router_node(Role_node):
 
         # self.__get_songs_tags_list()
 
-    
     def __get_songs_tags_list(self):
         # connect to a data node and ask for it
         addrs = core.get_addr_from_dns("distpotify.data" )
@@ -170,22 +205,39 @@ class Router_node(Role_node):
 
         return self.songs_tags_list
     
-    def send_songs_tags_list(self,connection:socket.socket):
-        data = self.__get_songs_tags_list()
-        h_d_t_list = tuple(["SSList",data,core.TAIL])
-        pickled_data = pickle.dumps(h_d_t_list)
+    def __get_best_providers(self,song_id):
+        pass
 
-        result = core.send_bytes_to(pickled_data,connection,True)
-        if result [0] == "OK":
-            print("Songs Tags Sended: ",pickle.loads(result[1]))
-            if result[0] == 'ACK' and result[1] == 'OK':
-                return True, True
-            return True, False
-        return False, False
+    def send_songs_tags_list(self,request_data,connection,address):
+        data = self.__get_songs_tags_list()
+        response = tuple(["SSList",data,core.TAIL])
+        encoded = pickle.dumps(response)
+
+        state = core.send_bytes_to(encoded,connection,False)
+        if state [0] == "OK":
+            result = core.receive_data_from(connection)
+            decoded = pickle.loads(result)
+            print("Songs Tags Sended ")
+            if 'ACK' in decoded:
+                return True
+            
+        return False
     
-    def send_providers_list(self,connection:socket.socket,song_id:int):
-        if self.providers_by_song.get(song_id):
-            providers = self.providers_by_song[song_id]
+    def send_providers_list(self,song_id:int,connection,address):
+        providers = self.__get_best_providers(song_id)
+
+        response = tuple(['SPList',providers,core.TAIL])
+        encoded = pickle.dumps(response)
+
+        state = core.send_bytes_to(encoded,connection,False)
+        if state [0] == "OK":
+            result = core.receive_data_from(connection)
+            decoded = pickle.loads(result)
+            print("Songs Tags Sended ")
+            if 'ACK' in decoded:
+                return True
+            
+        return False
 
 class DNS_node(Role_node):
     """DNS server node, with A records. An A record fields are:
@@ -202,9 +254,8 @@ class DNS_node(Role_node):
         # self.socket.bind((dns_ip,dns_port)) 
         # self.socket.listen(3)
         self.headers = {'ping':core.send_echo_replay,   # ping -_-  
-                        'RNSolve':self._name_solve,     # Request Name Solve | data: domain_to_solve
-                        # 'SNSolve':0,                    # Send Name Solve
-                        'AddRec' :0,                    # Add Record | data: (labels, addr, ttl) 
+                        'RNSolve':self.name_solve,      # Request Name Solve | data: domain_to_solve
+                        'AddRec' :self.add_record,      # Add Record | data: (labels, addr, ttl) 
             }
         # p = multiprocessing.Process(target=self.run,args=())
         # p.start()
@@ -243,7 +294,7 @@ class DNS_node(Role_node):
         return data
     
     # @staticmethod
-    def _add_record(self,request:tuple):
+    def add_record(self,request:tuple,connection,address):
         labels, addr, ttl = request
         record = dict()
     
@@ -273,21 +324,23 @@ class DNS_node(Role_node):
             if not files or len(files) == 0:
                 with open(os.path.join(path,labels),'wb') as f:
                     pickle.dump(rds,f)
-            else:
+            else: # TODO change files[0]
                 with open(os.path.join(path,files[0]),'wb') as f:
                     pickle.dump(rds,f)
         except FileNotFoundError:
             print("DNS error. Records not found")
+            return False
 
-        return record
+        encoded = pickle.dumps(core.ACK_OK_tuple)
+        state, _ = core.send_bytes_to(encoded,connection,False)
+        if state == 'OK': return True
+        return False
     
     # @staticmethod
-    def _name_solve(self,request:str):
-        # domain_parts = self.domain.split('.')
-        domain = request
+    def name_solve(self,domain:str,connection,address):
         all_records = DNS_node._get_records()
         if not all_records:
-            return None
+            return False
         try:
             records = all_records[domain]
             datas = [r['data'] for r in records]
@@ -296,8 +349,15 @@ class DNS_node(Role_node):
             error_msg = "DNS error. Problems with record of "+domain+"."
             raise errors.Error(error_msg)
 
-        to_encode = tuple(['SNSolve', datas, core.TAIL])
-        return to_encode
+        response = tuple(['SNSolve', datas, core.TAIL])
+        encoded = pickle.dumps(response)
+        state, _ = core.send_bytes_to(encoded,connection,False)
+        if state == 'OK': 
+            result = core.receive_data_from(connection)
+            decoded = pickle.loads(result)
+            if 'ACK' in decoded:
+                return True
+        return False
     
     # @staticmethod
     def _client_handler(self,connection:socket.socket,client_addr):

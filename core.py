@@ -160,7 +160,7 @@ def send_ping_to(address:str):
         pass
     return False
 
-def send_echo_replay(connection:socket.socket):
+def send_echo_replay(ping_data,connection:socket.socket,address):
     """answer a ping message"""
     pickled_data = pickle.dumps(ECHO_REPLAY)
     state, _ = send_bytes_to(pickled_data,connection,False)
