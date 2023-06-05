@@ -60,18 +60,8 @@ class Form(Tk):
         btn_filter = Button(box, text = 'Filter')
         btn_filter.place(x = 130, y = 35, width = 80, height = 30)
 
-    def btn_download_config(self):
-        pass
-    
-    def btn_play_config(self):
-        pass
-
-    def btn_load_config(self):
-        pass
-
-    def listbox_config(self):
-        pass
-
+    def set_widgets_actions(self):
+            pass
 
 if __name__ == '__main__':
     root = Form()
