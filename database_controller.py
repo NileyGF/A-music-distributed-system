@@ -2,6 +2,10 @@ import sqlite3
 import os
 from pydub import AudioSegment
 import io
+from mutagen.mp3 import MP3  
+from mutagen.easyid3 import EasyID3  
+import glob 
+from pydub.utils import make_chunks
 
 SPLIT_SIZE = 10
 
@@ -169,9 +173,7 @@ def get_song_tags(file_path:str):
 
         return title, artist, genre, duration
     """
-    from mutagen.mp3 import MP3  
-    from mutagen.easyid3 import EasyID3  
-    import glob 
+    
 
     filez = glob.glob(file_path) 
     audiofile = MP3(filez[0], ID3=EasyID3) 
@@ -250,7 +252,7 @@ def split_songs(songs_list:list, songs_tags:list, reesplit:bool = False):
         that belongs in the returned tuple of tuples.
     """
     if reesplit:
-        from pydub.utils import make_chunks
+        
         chunks = []
         for i in range(len(songs_list)):
             path = songs_list[i]

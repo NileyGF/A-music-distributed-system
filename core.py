@@ -145,17 +145,18 @@ def send_addr_to_dns(domain:str, address:tuple, ttl:int=60):
     
 def send_ping_to(address:str,data=None):
     """Send a ping message to address <ip:port>"""
-    messag = tuple([PING_tuple[0],data,PING_tuple[2]])
-    pickled_data = pickle.dumps(messag)
-    ip = address.split(':')[0]
-    port = int(address[1].split(':')[1])
-    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-    sock.connect((ip,port))
-
-    send_bytes_to(pickled_data,sock,False)
-    result = receive_data_from(sock,waiting_time_ms=3000,iter_n=3)
-    decoded = pickle.loads(result)
     try: 
+        messag = tuple([PING_tuple[0],data,PING_tuple[2]])
+        pickled_data = pickle.dumps(messag)
+        ip = address.split(':')[0]
+        port = int(address[1].split(':')[1])
+        sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        sock.connect((ip,port))
+    
+        send_bytes_to(pickled_data,sock,False)
+        result = receive_data_from(sock,waiting_time_ms=3000,iter_n=3)
+        decoded = pickle.loads(result)
+    
         if 'echoreply' in decoded:
             return True
     except:

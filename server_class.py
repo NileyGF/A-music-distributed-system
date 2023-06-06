@@ -1,13 +1,9 @@
-from socket import *
+import socket
 import sys
-import time
 import multiprocessing
-import subprocess
-import math
 import os
 from os import path
-from stat import *  # ST_SIZE etc
-import threading
+# from stat import *  # ST_SIZE etc
 import pickle
 import core
 import nodes_definition as nd
@@ -52,8 +48,8 @@ class Server:
         return self.accept_proccess
 
     def init_socket(self):
-        self.serverSocket = socket(AF_INET, SOCK_STREAM)
-        self.serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         address = (self.serverIpAddr, nd.ports_by_role[str(self.role_instance)])
         print(address)
         self.serverSocket.bind(address)
@@ -120,8 +116,8 @@ class Server:
         print("Im ", chosenPort)
         serverPort = chosenPort
         serverIP = self.serverIpAddr
-        serverSocket = socket(AF_INET, SOCK_STREAM)
-        serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         serverSocket.bind((serverIP, serverPort))
         serverSocket.listen(5)
         liveStatus = "Alive"
@@ -159,8 +155,8 @@ class Server:
     def closingServer(self, chosenPort):
         serverPort = chosenPort
         serverIP = self.serverIpAddr
-        serverSocket = socket(AF_INET, SOCK_STREAM)
-        serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         serverSocket.bind((serverIP, serverPort))
         serverSocket.listen(5)
         conn, address = serverSocket.accept()
