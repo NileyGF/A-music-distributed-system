@@ -199,7 +199,7 @@ def main():
     argSize = len(sys.argv)
     argList = sys.argv
     if argSize < 2:
-        argList = ['0','0.0.0.0']
+        argList = [None,'0','0.0.0.0']
 
     # Creating instances of Servers 
     if argList[1] == '0':
