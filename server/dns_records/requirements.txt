@@ -9,10 +9,8 @@ math
 struct
 os
 os.path
-pydub.AudioSegment
-pydyb.utils.make_chunks
+pydub
 sqlite3
 io
-mutagen.mp3.MP3
-mutagen.easyid3.EasyID3
+mutagen
 glob
