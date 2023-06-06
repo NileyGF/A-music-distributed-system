@@ -198,7 +198,7 @@ def main():
     # --------- Retrieve info from the terminal command ---------
     argSize = len(sys.argv)
     argList = sys.argv
-    if argSize == 0:
+    if argSize < 2:
         argList = ['0','0.0.0.0']
 
     # Creating instances of Servers 
