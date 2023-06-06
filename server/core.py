@@ -5,7 +5,7 @@ import pickle
 import errors
 
 # Addresses
-DNS_addr = ('192.168.43.161', 5353)
+DNS_addr = ('0.0.0.0', 5353)
 # LEADER_PORT = 8989
 DATA_PORT = 7777
 ROUTER_PORT = 8888

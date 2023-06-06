@@ -212,9 +212,9 @@ if __name__ == "__main__":
         order:str = input()
         if order == 'song list':
             cl.refresh_song_list()
-            print(cl.song_list)
+            print(cl.songsong_list)
         elif 'song' == order.split()[0]:
-            id = int(order[1])
+            id = int(order.split()[1])
             row = None
             for ind in cl.song_list:
                 if id == ind[0]:

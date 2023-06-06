@@ -201,31 +201,31 @@ def main():
     
 
     # Creating instances of Servers 
-    if argList[2] == '0':
-        Server0 = Server(0, argList[3])
+    if argList[1] == '0':
+        Server0 = Server(0, argList[2])
         p0 = Server0.assign_role(nd.DNS_node,())
-    elif argList[2] == '1':
-        Server1 = Server(1, argList[3])
+    elif argList[1] == '1':
+        Server1 = Server(1, argList[2])
         p1 = Server1.assign_role(nd.Data_node,('data_nodes', None, False, 'songs'))
-    elif argList[2] == '2':
-        Server2 = Server(2, argList[3])
+    elif argList[1] == '2':
+        Server2 = Server(2, argList[2])
         p2 = Server2.assign_role(nd.Data_node,('data_nodes', None, True, 'songs'))
-    elif argList[2] == '3':
-        Server3 = Server(3, argList[3])
+    elif argList[1] == '3':
+        Server3 = Server(3, argList[2])
         p3 = Server3.assign_role(nd.Router_node,())
-    elif argList[2] == '4':
-        Server4 = Server(4, argList[3])
+    elif argList[1] == '4':
+        Server4 = Server(4, argList[2])
         p4 = Server4.assign_role(nd.Router_node,())
 
-    if argList[2] == '0':
+    if argList[1] == '0':
         p0.join()
-    elif argList[2] == '1':
+    elif argList[1] == '1':
         p1.join()
-    elif argList[2] == '2':
+    elif argList[1] == '2':
         p2.join()
-    elif argList[2] == '3':
+    elif argList[1] == '3':
         p3.join()
-    elif argList[2] == '4':
+    elif argList[1] == '4':
         p4.join()
 
 
