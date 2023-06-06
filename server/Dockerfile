@@ -6,6 +6,15 @@ RUN pip3 freeze > requirements.txt
 
 RUN pip3 install -r requirements.txt
 
+RUN pip3 install pydub
+RUN pip3 install mutagen
+
 COPY . .
 
-CMD ["python3.11", "server_class.py"]
+ARG TYPE_SERVER
+ARG IP_ADDRESS
+
+ENV SERVER_TYPE=$TYPE_SERVER
+ENV SERVER_IP=$IP_ADDRESS
+
+CMD python3.11 server_class.py SERVER_TYPE SERVER_IP
