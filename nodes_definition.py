@@ -350,27 +350,6 @@ class DNS_node(Role_node):
         # p = multiprocessing.Process(target=self.run,args=())
         # p.start()
 
-    def run(self):
-        client_n = 1
-        try:
-            while True:                
-                conn, client_addr = self.socket.accept()                
-                print('DNS CONNECTION: ',client_n, '. Client: ',client_addr)
-                client_n += 1
-                # queue = multiprocessing.Queue()
-                # queue.put(dict())
-                p = multiprocessing.Process(target=self._client_handler,args=(conn,client_addr))
-                p.start()
-                # p.join(waiting_time_ms/1000)
-                # if p.is_alive():
-                #     print("Waiting for response timed-out.")
-                #     p.terminate()
-                #     p.join()
-                # if not queue.empty():
-                #     rd = queue.get() 
-                #     msg = rd.get('return')
-        finally:
-            self.socket.close()
 
     # @staticmethod
     def _get_records(self):
@@ -449,32 +428,17 @@ class DNS_node(Role_node):
                 return True
         return False
     
-    # @staticmethod
-    def _client_handler(self,connection:socket.socket,client_addr):
-        try:
-            while True:
-                request = core.receive_data_from(connection)
-                data = pickle.loads(request)
-                if 'RNSolve' in data:
-                    to_encode = DNS_node._name_solve(data[1])
-                    response = core.send_bytes_to(pickle.dumps(to_encode),connection,False)
-
-                elif 'ACK' in data:
-                    print('successfully')
-                    return 
-                else:
-                    error_msg = "Invalid DNS request: "+data[0]
-                    raise errors.Error(error_msg)
-                
-        except Exception as err:
-            print(err)
-        finally:
-
-            print('client handled.')
-            connection.close()
-
-    def update_using_ttl():
-        pass
+   
+    def update_using_ttl(self):
+        data = self._get_records()
+        for label in data:
+            for rec in data[label]:
+                if core.send_ping_to(rec['data']):
+                    if time.time()-rec['start_time']>=rec['ttl']:
+                        rec['start_time']=time.time()
+                else: data[label].remove(rec) # TODO: test remove() method
+        
+        
 
 ports_by_role = { str(Role_node())  : core.NONE_PORT,
                   str(Data_node())  : core.DATA_PORT,
