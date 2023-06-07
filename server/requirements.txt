@@ -1,0 +1,16 @@
+
+socket
+sys
+time
+multiprocessing
+subprocess
+pickle
+math
+struct
+os
+os.path
+pydub
+sqlite3
+io
+mutagen
+glob
