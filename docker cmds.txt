@@ -1,0 +1,18 @@
+docker network create my-network
+# creates a new Docker network called "my-network". Docker networks provide a way for containers to communicate with each other, and can be used to isolate container traffic from the host network or other Docker networks.
+
+docker run -d --name server --network my-network -p 8080:8080 server-image
+# This command launches a new Docker container named "server" and connects it to the "my-network" Docker network. The container is started in detached mode (-d flag) and runs the image specified by "server-image". The -p 8080:8080 flag maps port 8080 on the host to port 8080 on the container, allowing traffic to be sent to the container's listening port.
+
+docker run -d --name client --network my-network -p 8081:8080 client-image
+# same as up, but for the client image In this example, the client container listens on port 8081 on the host and maps it to port 8080 on the container.
+
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' server
+# This will return the IP address of the server container. Now, the client container can communicate with the server container using the server's IP address and port 8080. 
+
+docker container run -it --name console-app my-console-image
+# untested
+# This command will start a new container named "console-app" from the image "my-console-image" and open an interactive shell session inside the container. You can now interact with the console program running in the container.
+
+
+

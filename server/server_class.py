@@ -225,64 +225,6 @@ def main():
         p3.join()
 
 
-    # Function to safely exit program.
-    # def exitProgram():
-    #     p1.terminate()
-    #     p2.terminate()
-    #     p3.terminate()
-    #     p4.terminate()
-    #     os._exit(os.EX_OK)
-
-    # def output():
-    #     while True:
-    #         print("MultiServers")
-    #         print("Server 1 at Port: " +
-    #               str(PORT_NUMBERS[0]) + " Status: " + Server1.liveStatus + " To shutdown/wakeup enter 1")
-    #         print("Server 2 at Port: " +
-    #               str(PORT_NUMBERS[1]) + " Status: " + Server2.liveStatus + " To shutdown/wakeup enter 2")
-    #         print("Server 3 at Port: " +
-    #               str(PORT_NUMBERS[2]) + " Status: " + Server3.liveStatus + " To shutdown/wakeup enter 3")
-    #         print("Server 4 at Port: " +
-    #               str(PORT_NUMBERS[3]) + " Status: " + Server4.liveStatus + " To shutdown/wakeup enter 4")
-    #         print("To quit, enter -1: ")
-    #         val = int(input("\nEnter your Choice: "))
-    #         if val == 1:
-    #             if (Server1.liveStatus == "Alive"):
-    #                 Server1.kill()
-    #             else:
-    #                 Server1.alive()
-    #         elif val == 2:
-    #             if (Server2.liveStatus == "Alive"):
-    #                 Server2.kill()
-    #             else:
-    #                 Server2.alive()
-    #         elif val == 3:
-    #             if (Server3.liveStatus == "Alive"):
-    #                 Server3.kill()
-    #             else:
-    #                 Server3.alive()
-    #         elif val == 4:
-    #             if (Server4.liveStatus == "Alive"):
-    #                 Server4.kill()
-    #             else:
-    #                 Server4.alive()
-    #         elif val == -1:
-    #             exitProgram()
-    #         else:
-    #             print("Wrong input, try again..")
-    #         os.system("clear")
-
-    if argList[2] == '0':
-        p0.join()
-    elif argList[2] == '1':
-        p1.join()
-    elif argList[2] == '2':
-        p2.join()
-    elif argList[2] == '3':
-        p3.join()
-    elif argList[2] == '4':
-        p4.join()
-
 
 
 if __name__ == "__main__":
