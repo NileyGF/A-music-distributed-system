@@ -9,7 +9,7 @@ math
 struct
 os
 os.path
-pydub
+pydub192
 sqlite3
 io
 mutagen

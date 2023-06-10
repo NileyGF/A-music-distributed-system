@@ -8,6 +8,7 @@ RUN pip3 install -r requirements.txt
 
 RUN pip3 install pydub
 RUN pip3 install mutagen
+RUN pip3 install ffmpeg
 
 COPY . .
 
