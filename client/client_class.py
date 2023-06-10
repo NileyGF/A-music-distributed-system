@@ -1,5 +1,6 @@
 import socket
 import pickle
+import sys
 import math
 import core
 
@@ -207,6 +208,10 @@ class Client:
         return False
 
 if __name__ == "__main__":
+    argList = sys.argv
+    if len(argList) > 1:
+        core.DNS_addr = (argList[1],core.DNS_PORT)
+
     cl = Client()
     while True:
         order:str = input()

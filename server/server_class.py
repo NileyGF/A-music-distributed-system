@@ -198,8 +198,10 @@ def main():
     # --------- Retrieve info from the terminal command ---------
     argSize = len(sys.argv)
     argList = sys.argv
+    if argSize == 4:
+        core.DNS_addr = (argList[3],core.DNS_PORT)
     if argSize < 2:
-        argList = [None,'0','0.0.0.0']
+        argList = [None,'1','192.168.43.147']
 
     # Creating instances of Servers 
     if argList[1] == '0':
