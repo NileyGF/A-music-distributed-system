@@ -45,18 +45,20 @@ class Client:
         ack_encoded = pickle.dumps(ack)
 
         router_addrsss = self.__get_router_addr()
+        print('routers: ',router_addrsss)
         if not router_addrsss:
             return False
                     
         for rout in router_addrsss:
-            client_sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-            client_sock.connect(rout)
-            sl_request = tuple(["RSList",None,core.TAIL])
-            sl_encoded = pickle.dumps(sl_request)
-            sl_sended, _ = core.send_bytes_to(sl_encoded, client_sock, False)
-            if sl_sended == 'OK':
-                sl_result = core.receive_data_from(client_sock,1500,3000,10)
-                try:
+            try:
+                client_sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                client_sock.connect(rout)
+                sl_request = tuple(["RSList",None,core.TAIL])
+                sl_encoded = pickle.dumps(sl_request)
+                sl_sended, _ = core.send_bytes_to(sl_encoded, client_sock, False)
+                if sl_sended == 'OK':
+                    sl_result = core.receive_data_from(client_sock,1500,3000,10)
+                    
                     sl_decoded = pickle.loads(sl_result)
                     # Send ACK
                     core.send_bytes_to(ack_encoded,client_sock,False)
@@ -64,14 +66,15 @@ class Client:
                     if 'SSList' in sl_decoded:
                         client_sock.close()
                         self.song_list = sl_decoded[1]
-                        return True
-                except Exception as err:
+                        return True    
+                else: 
                     client_sock.close()
-                    print(err)
-                    return False        
-            else: 
+                    return False
+                
+            except Exception as err:
                 client_sock.close()
-                return False
+                print(err)
+                return False  
 
     def __request_song_known_addr(self, song_id, n_chunks, provider_addr):
         ack = tuple(["ACK","OK",core.TAIL])
@@ -212,13 +215,14 @@ if __name__ == "__main__":
     argList = sys.argv
     if len(argList) > 1:
         core.DNS_addr = (argList[1],core.DNS_PORT)
+    core.DNS_addr = ('172.20.0.2',core.DNS_PORT)
 
     cl = Client()
     while True:
         order:str = input()
         if order == 'song list':
             cl.refresh_song_list()
-            print(cl.songsong_list)
+            print(cl.song_list)
         elif 'song' == order.split()[0]:
             id = int(order.split()[1])
             row = None

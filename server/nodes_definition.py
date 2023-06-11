@@ -139,14 +139,15 @@ class Data_node(Role_node):
         query = "SELECT * from songs where id_S = "+str(song_id)
         # row = [id_S, title, artists, genre, duration_ms, chunk_slice]
         row = dbc.read_data(self.db_path, query)
-
+        row = row[0]
+        print('song row: ',row)
         # duration_sec = duration_ms / 1000
         duration_sec = row[4] / 1000 
         number_of_chunks:float = duration_sec / row[5]
         number_of_chunks = math.ceil(number_of_chunks)
 
-        chunks = dbc.get_n_chunks(0,song_id,number_of_chunks)
-
+        chunks = dbc.get_n_chunks(0,song_id,number_of_chunks,self.db_path)
+        print('chunks gotten')
         for ch in chunks:
             try:
                 encoded = pickle.dumps(tuple(['Schunk',ch,core.TAIL]))
@@ -167,7 +168,7 @@ class Data_node(Role_node):
             return False
         id_Song = int(request_data[0])
         ms = int(request_data[1])
-        chunk = dbc.get_a_chunk(ms,id_Song) 
+        chunk = dbc.get_a_chunk(ms,id_Song,self.db_path) 
         try:
             encoded = pickle.dumps(tuple(['Schunk',chunk,core.TAIL]))
             state, _ = core.send_bytes_to(encoded,connection,False)

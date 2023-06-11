@@ -294,7 +294,7 @@ def songs_list_from_directory(dir_path:str):
     return songs_list
 
 
-def get_a_chunk(start_time_ms:int, id_S:int):
+def get_a_chunk(start_time_ms:int, id_S:int,data_base_file_path:str='spotify_db.db'):
     """ Returns the chunk containing start_time_ms millisecond of the song with id = id_S"""
     c = int((start_time_ms / 1000) // 10)
     if c < 10:
@@ -305,7 +305,7 @@ def get_a_chunk(start_time_ms:int, id_S:int):
 
     query = "SELECT * from chunks where id_Chunk = '" + id_chunk + "'"
 
-    chunk = read_data('spotify_db.db',query)
+    chunk = read_data(data_base_file_path,query)
     if isinstance(chunk,list):
         if len(chunk) > 0:
             chunk = chunk[0]   
@@ -314,7 +314,7 @@ def get_a_chunk(start_time_ms:int, id_S:int):
 
     return sound
     
-def get_n_chunks(start_time_ms:int, id_S:int, n:int):
+def get_n_chunks(start_time_ms:int, id_S:int, n:int,data_base_file_path:str='spotify_db.db'):
     """ Returns n chunks, beginning in the one containing start_time_ms millisecond of the song with id = id_S"""
     ids = []
     audios = []
@@ -330,7 +330,7 @@ def get_n_chunks(start_time_ms:int, id_S:int, n:int):
         ids.append(id_chunk)
         query = "SELECT * from chunks where id_Chunk = '" + id_chunk + "'"
 
-        chunk = read_data('spotify_db.db',query)
+        chunk = read_data(data_base_file_path,query)
         if isinstance(chunk,list):
             if len(chunk) > 0:
                 chunk = chunk[0]   

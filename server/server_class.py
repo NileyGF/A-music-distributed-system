@@ -92,6 +92,7 @@ class Server:
         received = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=5)
         try:
             decoded = pickle.loads(received)
+            print('received: ', decoded)
             if not self.role_instance.headers.get(decoded[0]):
                 response = core.FAILED_REQ
                 encoded = pickle.dumps(response)
@@ -201,7 +202,7 @@ def main():
     if argSize == 4:
         core.DNS_addr = (argList[3],core.DNS_PORT)
     if argSize < 2:
-        argList = [None,'1','192.168.43.147']
+        argList = [None,'0','192.168.43.147']
 
     # Creating instances of Servers 
     if argList[1] == '0':
