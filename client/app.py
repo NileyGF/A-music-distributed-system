@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import ttk
+from client_class import Client
 import os
 
 class Form(Tk):
@@ -7,6 +8,7 @@ class Form(Tk):
         Tk.__init__(self)
         self.config(bg = 'white')
 
+        self.client = Client()
         self.btn_download = None
         self.btn_play = None
         self.btn_load = None
@@ -15,6 +17,7 @@ class Form(Tk):
 
         self.set_size()
         self.create_widgets()
+        self.set_widgets_actions()
 
 
     def set_size(self, sheight:int = 610, swidth:int = 800):
@@ -61,7 +64,17 @@ class Form(Tk):
         btn_filter.place(x = 130, y = 35, width = 80, height = 30)
 
     def set_widgets_actions(self):
-            pass
+        self.btn_load.config(command=self._get_songs)
+
+    def _get_songs(self):
+        print('Here')
+        data = self.client.refresh_song_list()
+        print(data)
+        if data:
+            for i in range(len(data)):
+                self.list_box.insert(i, data[0])
+            
+
 
 if __name__ == '__main__':
     root = Form()
