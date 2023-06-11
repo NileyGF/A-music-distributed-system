@@ -3,6 +3,7 @@ import pickle
 import sys
 import math
 import core
+from os import path
 
 class Client:
     def __init__(self) -> None:

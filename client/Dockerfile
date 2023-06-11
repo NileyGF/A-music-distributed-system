@@ -1,6 +1,6 @@
 FROM docker.uclv.cu/python:3.11-slim as build
 
-WORKDIR /Users/josue/Downloads/Dist/d_system/A-music-distributed-system/client/
+WORKDIR /Users/josue/Downloads/Dist/d_system/A-music-distributed-system/
 
 RUN pip3 freeze > requirements.txt
 

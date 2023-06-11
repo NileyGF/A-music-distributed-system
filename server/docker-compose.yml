@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+  server:
+    image: server
+    container_name: server
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - spotify
+    depends_on:
+      - dns
+      - router
+      - server1
+    command: [ "./server_class.sh" ]
+
+  # client:
+  #   image: client
+  #   container_name: client
+  #   networks:
+  #     - spotify
+  #   command: [ "client_class.sh" ]
+
+  dns:
+    image: server
+    container_name: dns
+    networks:
+      - spotify
+
+  router:
+    image: server
+    container_name: router
+    networks:
+      - spotify
+
+  # db:
+  #   # puse la bd pero no se si haga falta
+  #   image: db-image
+  #   container_name: db-container
+  #   networks:
+  #     - spotify_network
+
+  server1:
+    # no sé si haga falta estos pero por si acaso hago uno más
+    image: server
+    container_name: server1
+    networks:
+      - spotify
+
+networks:
+  spotify:

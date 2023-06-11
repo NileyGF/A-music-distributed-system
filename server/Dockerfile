@@ -18,4 +18,6 @@ ARG IP_ADDRESS
 ENV SERVER_TYPE=$TYPE_SERVER
 ENV SERVER_IP=$IP_ADDRESS
 
+
+RUN chmod +x server_class.py
 CMD python3.11 server_class.py SERVER_TYPE SERVER_IP
