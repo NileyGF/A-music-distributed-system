@@ -335,8 +335,8 @@ def get_n_chunks(start_time_ms:int, id_S:int, n:int,data_base_file_path:str='spo
             if len(chunk) > 0:
                 chunk = chunk[0]   
         chunk = chunk[1]
-        sound = AudioSegment.from_mp3(io.BytesIO(chunk))
-        audios.append(sound)
+        # sound = AudioSegment.from_mp3(io.BytesIO(chunk))
+        audios.append(chunk)
     return audios
 
 def get_aviable_songs(data_base_file_path:str='spotify_db.db'):

@@ -98,7 +98,9 @@ class Client:
                 core.send_bytes_to(ack_encoded,client_sock,False)
 
                 if 'Schunk' in rs_decoded:
-                    rs_decoded[1].export(f"{song_id}_dice{i}.mp3", format='mp3')
+                    # rs_decoded[1].export(f"{song_id}_dice{i}.mp3", format='mp3')
+                    with open(f'{song_id}_dice_{i}.mp3','wb') as f:
+                        f.write(rs_decoded[1])
 
             client_sock.close()
             return True
