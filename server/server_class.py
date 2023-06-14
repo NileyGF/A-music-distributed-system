@@ -26,7 +26,7 @@ class Server:
     def __init__(self, serverNumber, serverIpAddr, role:nd.Role_node=None,args:tuple=()):
 
         self.serverHeaders = {'ReqJRing':self.__requested_join,   # Request Join Ring
-                              'JRingAt':self.__new_neighbors,    # Join Ring At
+                            #   'JRingAt':self.__new_neighbors,    # Join Ring At
                             #   'ReqInit':0, # Request Initialization Info
                             #   'SolInit':0, # Solved Initialization Info
                               'FallenNode':0, # Fallen Node
@@ -163,7 +163,7 @@ class Server:
 
                     if 'SolInit' in decoded:
                         args = decoded[1]
-                        self.role_instance = nd.Data_node(*args)
+                        self.role_instance = nd.Data_node(n_data+1,*args)
                         return
 
             except:

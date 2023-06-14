@@ -57,7 +57,7 @@ class Data_node(Role_node):
         self.id = server_id
         
         self.headers = {'ping'  :core.send_echo_replay,         # ping -_-  
-                        'ReqInit':0,    # Request Initialization Info
+                        'ReqInit':self.replicate_data,          # Request Initialization Info
                         'SolInit':0,    # Solved Initialization Info
                         'RSList':self.request_songs_list,       # Request Songs List
                         'Rsong' :self.request_song,             # Request song
@@ -120,7 +120,23 @@ class Data_node(Role_node):
         return False
 
     def replicate_data(self,request_data,connection,address):
-        pass
+        # args = ( path='', database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None )
+        with open(self.db_path,'rb') as f:
+            database_bin = f.read()
+
+        args = (self.path, database_bin, False, None)
+        encoded = pickle.dumps(tuple(['SolInit',args,core.TAIL]))
+
+        state, _ = core.send_bytes_to(encoded,connection,False)
+        if state == 'OK': 
+            result = core.receive_data_from(connection)
+            decoded = pickle.loads(result)
+            try: 
+                if 'ACK' in decoded:
+                    return True
+            except:
+                pass
+        return False
 
     def add_song(self,song_bin:bytes,connection,address):
         pass
