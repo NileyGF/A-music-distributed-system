@@ -5,8 +5,8 @@ import pickle
 import errors
 
 # Addresses
-DNS_addr = ('0.0.0.0', 5353)
-# LEADER_PORT = 8989
+DNS_addr = ('172.20.0.2', 5353)
+
 DATA_PORT = 7777
 ROUTER_PORT = 8888
 DNS_PORT = 5353
@@ -117,9 +117,6 @@ def get_addr_from_dns(domain:str):
     sock.close()
     
     if result[0] == 'SNSolve':
-    #     ip = result[1].split(':')[0]
-    #     port = int(result[1].split(':')[1])
-    # return (ip,port)
         return result[1]
 
 def send_addr_to_dns(domain:str, address:tuple, ttl:int=60):
@@ -169,3 +166,5 @@ def send_echo_replay(ping_data,connection:socket.socket,address):
     state, _ = send_bytes_to(pickled_data,connection,False)
     if state == 'OK': return True
     return False
+
+

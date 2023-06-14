@@ -6,6 +6,7 @@ from os import path
 import pickle
 import core
 import nodes_definition as nd
+import leader_election as elect
 
 
 class Server:
@@ -16,14 +17,12 @@ class Server:
     serverIpAddr = ""
     # Will be re-assigned by constructor.
     serverNumber = 1
-    # Status toggled on/off
-    liveStatus = "Alive"
-    # shutdown list is shared between instances, i.e. if one object changes it,
-    # the change is reflected to all objects. It starts with all False because
-    # all servers are up initially. (Maybe this is not necessary)
-    shutdown = [False, False, False, False]
 
-    # Constructor
+    serverHeaders = {'ReqELECTION':elect.ongoing_election,   # Request ELECTION
+                     'RecELECTION':0,                        # Received ELECTION
+                     'ELECTED':elect.ended_election          # ELECTED (Election result)
+                    }
+
 
     def __init__(self, serverNumber, serverIpAddr):
         self.serverNumber = serverNumber
@@ -50,21 +49,17 @@ class Server:
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         address = (self.serverIpAddr, nd.ports_by_role[str(self.role_instance)])
-        print(address)
         self.serverSocket.bind(address)
+        print(address)
         self.serverSocket.listen(5)
         self.liveStatus = "Alive"
         if not isinstance(self.role_instance,nd.DNS_node):
             # while True:
             try:                    
-                # self.serverSocket.connect(core.DNS_addr)
                 result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance)],address)
                 # if result: break
             except Exception as err:
                 print(err)    
-
-        # TODO find out if the connection to DNS must/can be closed
-        # self.serverSocket.detach()
 
         proccesses = []
         try:
@@ -93,106 +88,28 @@ class Server:
         try:
             decoded = pickle.loads(received)
             print('received: ', decoded)
-            if not self.role_instance.headers.get(decoded[0]):
+            # check if it is a server action
+            if self.serverHeaders.get(decoded[0]):
+                handler = self.serverHeaders.get(decoded[0])
+                response = handler(self,decoded[1],connection,address)
+            # else, if it isn't a role action, send FAILED REQUEST
+            elif not self.role_instance.headers.get(decoded[0]):
                 response = core.FAILED_REQ
                 encoded = pickle.dumps(response)
-                sended, _ = core.send_bytes_to(encoded,connection,False)
+                core.send_bytes_to(encoded,connection,False)
             else:
                 handler = self.role_instance.headers.get(decoded[0])
                 response = handler(decoded[1],connection,address)
-                # encoded = pickle.dumps(response)
-                # sended, _ = core.send_bytes_to(encoded,connection,False)
+
         except Exception as err:
-            print(err) 
+            print(err, "FAILED REQ") 
             response = core.FAILED_REQ
             encoded = pickle.dumps(response)
-            sended, _ = core.send_bytes_to(encoded,connection,False)
+            core.send_bytes_to(encoded,connection,False)
                  
         finally:
             connection.close()
 
-    # Socket Programming for Server 1 to 4 (it can be more)
-    def serverProgram(self, chosenPort):
-        print("Im ", chosenPort)
-        serverPort = chosenPort
-        serverIP = self.serverIpAddr
-        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        serverSocket.bind((serverIP, serverPort))
-        serverSocket.listen(5)
-        liveStatus = "Alive"
-        conn, address = serverSocket.accept()
-        print(conn)
-        while True:
-            try:
-                # print("Connection from: " + str(address))
-                data = core.receive_data_from(conn)
-                # Decode received data into UTF-8
-                data = pickle.loads(data)
-                # Convert decoded data into list
-                print(data)
-                data = eval(data)
-                if (self.liveStatus == "Dead"):
-                    # print("Im here")
-                    continue
-                # print(data)
-                file1 = open("segment"+str(data[0])+".mp4", "rb")
-                fileData = file1.read(100000000)
-                conn.send(fileData)
-                # print("Segment "+str(data[0]) +
-                #       " sent by " + str(self.serverNumber))
-                continue
-            except Exception as e:
-                # Block runs when all segments asked by client have been sent.
-                # Do last minute programming here
-                # print("Server "+str(self.serverNumber)+" list over")
-                print(e)
-                continue
-        # print("Server not listening")
-        # serverSocket.close()
-
-    # Socket Programming for Server 5
-    def closingServer(self, chosenPort):
-        serverPort = chosenPort
-        serverIP = self.serverIpAddr
-        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        serverSocket.bind((serverIP, serverPort))
-        serverSocket.listen(5)
-        conn, address = serverSocket.accept()
-        tempArray = []
-        while True:
-            try:
-                # print("Connection from: " + str(address))
-                # x1 is a boolean list that tells which servers are down.
-                x1 = []
-                for x in range(len(self.shutdown)):  # Loop to populate x1
-                    if (self.shutdown[x] == True):
-                        x1.append(0)
-                        # self.shutdown[x] = False
-                    else:
-                        x1.append(1)
-                if (tempArray == x1):  # If list is same as before, continue
-                    continue
-                else:  # If list different, send its contents.
-                    x1 = str(x1)
-                    x1 = x1.encode()
-                    conn.send(x1)
-            except Exception as e:
-                # print("Server 5 connection over.")
-                raise e  # Throws exception to try/except in runServer5 block
-                break
-
-# Function to carry out the finsihing tasks(updating shutdown array etc..) before a server is forecfully shutdown.
-
-    def kill(self):
-        self.liveStatus = "Dead"
-        self.shutdown[self.serverNumber-1] = True
-
-# Function to carry out the starting tasks(updating shutdown array etc..) before a server is forecfully woken up.
-    def alive(self):
-        self.liveStatus = "Alive"
-        self.shutdown[self.serverNumber-1] = False
 
 
 def main():
@@ -202,7 +119,7 @@ def main():
     if argSize == 4:
         core.DNS_addr = (argList[3],core.DNS_PORT)
     if argSize < 2:
-        argList = [None,'0','192.168.43.147']
+        argList = [None,'0','172.20.0.0']
 
     # Creating instances of Servers 
     if argList[1] == '0':
@@ -228,8 +145,6 @@ def main():
         p3.join()
 
 
-
-
 if __name__ == "__main__":
     main()
-    # python3 server_class.py --status-interval 10 --num-of-servers 5 --file-name data.txt -server-ip 127.0.0.1 8888 8887 8886 8885 8884
+    # python3 server_class.py <server_number> <server_ip> <DNS_ip>

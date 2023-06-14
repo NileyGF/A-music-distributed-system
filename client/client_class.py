@@ -217,7 +217,7 @@ if __name__ == "__main__":
     argList = sys.argv
     if len(argList) > 1:
         core.DNS_addr = (argList[1],core.DNS_PORT)
-    core.DNS_addr = ('172.20.0.2',core.DNS_PORT)
+    # core.DNS_addr = ('172.20.0.2',core.DNS_PORT)
 
     cl = Client()
     while True:

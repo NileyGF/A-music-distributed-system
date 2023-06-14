@@ -30,12 +30,15 @@ headers = { 'SSList':0,     # Send Songs List
             'ping'    :0,   # ping -_-  
             'echoreply':0,  # ping reply
             'FailedReq':0,  # Failed Request
-            # ''
+            'ReqELECTION':0,# Request ELECTION
+            'RecELECTION':0,# Received ELECTION
+            'ELECTED':0,    # ELECTED (Election result)
             }
 
 
 class Role_node():
     """base class for all roles"""
+    group_leader  = None
     def __init__(self,server_id=None):
         self.headers = {'ping':core.send_echo_replay}
     def __str__(self) -> str:
@@ -337,12 +340,7 @@ class DNS_node(Role_node):
         TTL   : Time to live (how long the RR can be cached).Represents the number of seconds that a resolver cache can store the record before discarding it.
         Data  : The actual content of the record, typically consisting of an IP address, domain name, or other relevant identifier."""
     
-    def __init__(self,server_id=None): #,dns_ip=core.DNS_addr[0],dns_port=core.DNS_addr[1]):
-        
-        # self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        # self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        # self.socket.bind((dns_ip,dns_port)) 
-        # self.socket.listen(3)
+    def __init__(self,server_id=None): 
         self.headers = {'ping':core.send_echo_replay,   # ping -_-  
                         'RNSolve':self.name_solve,      # Request Name Solve | data: domain_to_solve
                         'AddRec' :self.add_record,      # Add Record | data: (labels, addr, ttl) 
@@ -350,8 +348,6 @@ class DNS_node(Role_node):
         # p = multiprocessing.Process(target=self.run,args=())
         # p.start()
 
-
-    # @staticmethod
     def _get_records(self):
         path = "dns_records"
         try:
@@ -361,8 +357,7 @@ class DNS_node(Role_node):
         except FileNotFoundError:
             print("DNS error. Records not found")
         return data
-    
-    # @staticmethod
+
     def add_record(self,request:tuple,connection,address):
         labels, addr, ttl = request
         record = dict()
@@ -404,8 +399,7 @@ class DNS_node(Role_node):
         state, _ = core.send_bytes_to(encoded,connection,False)
         if state == 'OK': return True
         return False
-    
-    # @staticmethod
+
     def name_solve(self,domain:str,connection,address):
         all_records = self._get_records()
         if not all_records:
@@ -428,7 +422,6 @@ class DNS_node(Role_node):
                 return True
         return False
     
-   
     def update_using_ttl(self):
         data = self._get_records()
         for label in data:
