@@ -30,15 +30,23 @@ headers = { 'SSList':0,     # Send Songs List
             'ping'    :0,   # ping -_-  
             'echoreply':0,  # ping reply
             'FailedReq':0,  # Failed Request
-            'ReqELECTION':0,# Request ELECTION
-            'RecELECTION':0,# Received ELECTION
-            'ELECTED':0,    # ELECTED (Election result)
+            'ReqInit':0,    # Request Initialization Info
+            'SolInit':0,    # Solved Initialization Info
+            'ReqJRing':0,   # Request Join Ring
+            'JRingAt':0,    # Join Ring At
+            'FallenNode':0, # Fallen Node
+            'Unbalance':0,  # Unbalanced Roles
+
+
+            # 'ReqELECTION':0,# Request ELECTION
+            # 'RecELECTION':0,# Received ELECTION
+            # 'ELECTED':0,    # ELECTED (Election result)
             }
 
 
 class Role_node():
     """base class for all roles"""
-    group_leader  = None
+    # group_leader  = None
     def __init__(self,server_id=None):
         self.headers = {'ping':core.send_echo_replay}
     def __str__(self) -> str:
@@ -48,9 +56,9 @@ class Data_node(Role_node):
     def __init__(self,server_id=None, path='', database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None):
         self.id = server_id
         
-        # core.send_addr_to_dns
-        
         self.headers = {'ping'  :core.send_echo_replay,         # ping -_-  
+                        'ReqInit':0,    # Request Initialization Info
+                        'SolInit':0,    # Solved Initialization Info
                         'RSList':self.request_songs_list,       # Request Songs List
                         'Rsong' :self.request_song,             # Request song
                         'Rchunk':self.request_chunk,            # Request chunk
@@ -110,6 +118,9 @@ class Data_node(Role_node):
             except:
                 pass
         return False
+
+    def replicate_data(self,request_data,connection,address):
+        pass
 
     def add_song(self,song_bin:bytes,connection,address):
         pass
