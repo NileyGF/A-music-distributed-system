@@ -8,11 +8,11 @@ services:
       - "80:80"
       - "443:443"
     networks:
-      - spotify
+      spotify:
+        ipv4_address: 172.20.0.5
     depends_on:
       - dns
       - router
-      - server1
     command: [ "./server_class.sh" ]
 
   # client:
@@ -26,14 +26,15 @@ services:
     image: server
     container_name: dns
     networks:
-      - spotify
+      spotify:
+        ipv4_address: 172.20.0.2
 
   router:
     image: server
     container_name: router
     networks:
-      - spotify
-
+      spotify:
+        ipv4_address: 172.20.0.10
   # db:
   #   # puse la bd pero no se si haga falta
   #   image: db-image
@@ -41,12 +42,16 @@ services:
   #   networks:
   #     - spotify_network
 
-  server1:
-    # no sé si haga falta estos pero por si acaso hago uno más
-    image: server
-    container_name: server1
-    networks:
-      - spotify
+  # server1:
+  #   # no sé si haga falta estos pero por si acaso hago uno más
+  #   image: server
+  #   container_name: server1
+  #   networks:
+  #     spotify:
+  #       ipv4_address: 172.20.0.11
 
 networks:
   spotify:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
