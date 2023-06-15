@@ -12,6 +12,7 @@ import os
 import math
 import random
 import time
+import multiprocessing
 
 headers = { 'SSList':0,     # Send Songs List 
             'RSList':0,     # Request Songs List
@@ -46,14 +47,13 @@ headers = { 'SSList':0,     # Send Songs List
 
 class Role_node():
     """base class for all roles"""
-    # group_leader  = None
     def __init__(self,server_id=None):
         self.headers = {'ping':core.send_echo_replay}
     def __str__(self) -> str:
         return self.__class__.__name__
 
 class Data_node(Role_node):
-    def __init__(self,server_id=None, path='', database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None):
+    def __init__(self,server_id=0, path='', database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None):
         self.id = server_id
         
         self.headers = {'ping'  :core.send_echo_replay,         # ping -_-  
@@ -67,14 +67,12 @@ class Data_node(Role_node):
                         'DSong' :self.remove_song,              # Delete Song
                         'SynData':self.sync_data_center,        # Synchronize Data Center
                         }
+        
         # path to read and save data from (must be on os format)
         self.path = path 
         # full path of the sqlite database file
         self.db_path = 'spotify_'+str(self.id)+'.db'
         self.db_path = os.path.join(self.path,self.db_path)
-        
-        # self.state = state
-        self.have_data = False
 
         if begin_new_data_base:
             # start new database and fill it with data from the songs in 'raw_songs_path' 
@@ -85,19 +83,16 @@ class Data_node(Role_node):
             try:
                 songs_list = dbc.songs_list_from_directory(raw_songs_path)
                 dbc.Insert_songs(songs_list,self.db_path)
-                self.have_data = True
             except Exception as er:
                 print(er)
-        else:
-            # save the database from 'database_bin' into a file if it's a valid value
-            if database_bin != None:
-                with open(self.db_path,'wb') as f:
-                    f.write(database_bin)
-                    self.have_data = True
 
-            # TODO remove
-            self.have_data = True
-    
+        elif database_bin != None:
+            # save the database from 'database_bin' into a file if it's a valid value
+            with open(self.db_path,'wb') as f:
+                f.write(database_bin)
+        else: 
+            raise Exception("The data server didn't receive any database. Initialize with a binary database or with the songs' path")
+
     def have_song(self,song_id:int,connection,address):
         query = "SELECT * from songs where id_S = "+str(song_id)
         # row = [id_S, title, artists, genre, duration_ms, chunk_slice]
@@ -227,18 +222,10 @@ class Router_node(Role_node):
                         'Rsong': self.send_providers_list,      # Request song
                         'Rchunk':self.send_providers_list,      # Request chunk
                         }
-        # addrs = core.get_addr_from_dns("distpotify.router.leader" )
-
-        # now connect to "distpotify.router.leader" 
-        # leader_addr = (result[1],core.LEADER_PORT)
-        # sock.connect(leader_addr)
-
 
         self.providers_by_song = dict()     # update by time or by event
         self.existing_providers = list()
         self.songs_tags_list = list()       # update by time or by event
-
-        # self.__get_songs_tags_list()
 
     def __get_songs_tags_list(self):
         # connect to a data node and ask for it
@@ -372,8 +359,9 @@ class DNS_node(Role_node):
                         'RNSolve':self.name_solve,      # Request Name Solve | data: domain_to_solve
                         'AddRec' :self.add_record,      # Add Record | data: (labels, addr, ttl) 
             }
-        # p = multiprocessing.Process(target=self.run,args=())
-        # p.start()
+        multiprocessing.set_start_method('fork', force=True)
+        p = multiprocessing.Process(target=self.update_using_ttl)
+        p.start()
 
     def _get_records(self):
         path = "dns_records"
@@ -438,7 +426,7 @@ class DNS_node(Role_node):
             # problems in the records for self.domain
             error_msg = "DNS error. Problems with record of "+domain+"."
             raise errors.Error(error_msg)
-
+        datas = self.__alive_from(datas)
         response = tuple(['SNSolve', datas, core.TAIL])
         encoded = pickle.dumps(response)
         state, _ = core.send_bytes_to(encoded,connection,False)
@@ -450,21 +438,35 @@ class DNS_node(Role_node):
         return False
     
     def update_using_ttl(self):
-        data = self._get_records()
+        try:
+            data = self._get_records()
+        except:
+            return 
         for label in data:
             for rec in data[label]:
                 if core.send_ping_to(rec['data']):
-                    if time.time()-rec['start_time']>=rec['ttl']:
-                        rec['start_time']=time.time()
-                else: data[label].remove(rec) # TODO: test remove() method
+                    if time.time() - rec['start_time'] >= rec['ttl']:
+                        rec['start_time'] = time.time()
+                        print('Updated TTL for ', rec['data'])
+                else: 
+                    print('Records before removing: ', data[label])
+                    data[label].remove(rec) # TODO: test remove() method
+                    print('Records after removing: ', data[label])
         
-        
+    def __alive_from(self,addrss):
+        result = []
+        for addr in addrss:
+            if core.send_ping_to(addr):
+                result.append(addr)
+        return result
 
-ports_by_role = { str(Role_node())  : core.NONE_PORT,
-                  str(Data_node())  : core.DATA_PORT,
-                  str(Router_node()): core.ROUTER_PORT,
-                  str(DNS_node())   : core.DNS_PORT}
-domains_by_role = {str(Role_node()) : 'distpotify.no_role',
-                  str(Data_node())  : 'distpotify.data',
-                  str(Router_node()): 'distpotify.router',
-                  str(DNS_node())   : ''}
+
+ports_by_role = { 'Role_node'  : core.NONE_PORT,
+                  'Data_node'  : core.DATA_PORT,
+                  'Router_node': core.ROUTER_PORT,
+                  'DNS_node'   : core.DNS_PORT}
+
+domains_by_role = {'Role_node'  : 'distpotify.no_role',
+                   'Data_node'  : 'distpotify.data',
+                   'Router_node': 'distpotify.router',
+                   'DNS_node'   : ''}

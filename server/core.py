@@ -11,6 +11,7 @@ DATA_PORT = 7777
 ROUTER_PORT = 8888
 DNS_PORT = 5353
 NONE_PORT = 6789
+RING_PORT = 8000
 # Messages
 TAIL = '!END!'
 ACK_OK_tuple = tuple(["ACK","OK",TAIL])
@@ -19,7 +20,7 @@ ECHO_REPLAY = tuple(['echoreplay',None,TAIL])
 FAILED_REQ = tuple(['FailedReq',None,TAIL])
 
 
-def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: bool = True, attempts: int = 3, time_to_retry_ms: int = 1000, bytes_flow: int = 1500, timeout=10):
+def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: bool = True, attempts: int = 3, time_to_retry_ms: int = 1000, bytes_flow: int = 1500):
     # number of sending attempts while a disconnection error pops up
     if attempts < 0:
         attempts = 3
