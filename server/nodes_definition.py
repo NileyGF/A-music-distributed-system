@@ -53,7 +53,7 @@ class Role_node():
         return self.__class__.__name__
 
 class Data_node(Role_node):
-    def __init__(self,server_id=0, path='', database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None):
+    def __init__(self,server_id=0, path='data_nodes', database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None):
         self.id = server_id
         
         self.headers = {'ping'  :core.send_echo_replay,         # ping -_-  
@@ -438,20 +438,35 @@ class DNS_node(Role_node):
         return False
     
     def update_using_ttl(self):
-        try:
-            data = self._get_records()
-        except:
-            return 
-        for label in data:
-            for rec in data[label]:
-                if core.send_ping_to(rec['data']):
-                    if time.time() - rec['start_time'] >= rec['ttl']:
-                        rec['start_time'] = time.time()
-                        print('Updated TTL for ', rec['data'])
-                else: 
-                    print('Records before removing: ', data[label])
-                    data[label].remove(rec) # TODO: test remove() method
-                    print('Records after removing: ', data[label])
+        while True:
+            time.sleep(15)
+            try:
+                data = self._get_records()
+            except:
+                continue
+            for label in data:
+                for rec in data[label]:
+                    if core.send_ping_to(rec['data']):
+                        if time.time() - rec['start_time'] >= rec['ttl']:
+                            rec['start_time'] = time.time()
+                            print('Updated TTL for ', rec['data'])
+                    else: 
+                        print('\n Record to remove', rec)
+                        data[label].remove(rec) # TODO: test remove() method
+                        print('Records after removing: ', data[label])
+                        
+            path = "dns_records"        
+            try:
+                files = os.listdir(path)
+                if not files or len(files) == 0:
+                    with open(os.path.join(path,'rcrds.bin'),'wb') as f:
+                        pickle.dump(data,f)
+                else: # TODO change files[0]
+                    with open(os.path.join(path,files[0]),'wb') as f:
+                        pickle.dump(data,f)
+            except FileNotFoundError:
+                print("DNS error. Records not found")
+                return False
         
     def __alive_from(self,addrss):
         result = []

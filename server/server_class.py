@@ -16,7 +16,7 @@ class Server:
     # Constructor updates this.
     serverIpAddr = ""
     # Will be re-assigned by constructor.
-    # serverNumber = 1
+    serverNumber = 1
     next_neighbor = None
     second_neighbor = None
     back_neighbor = None   
@@ -37,11 +37,11 @@ class Server:
         self.ring_proccess = multiprocessing.Process(target=self.ring_handler)
         self.ping_next_proccess= multiprocessing.Process(target=self.ping_next)
 
-        # self.serverNumber = serverNumber
+        self.serverNumber = serverNumber
         self.serverIpAddr = serverIpAddr
         # self.role_instance = nd.Role_node(self.serverNumber)
         if role != None:
-            self.role_instance = role(*args)
+            self.role_instance = role(serverNumber,*args)
         else:
             self.__get_role()
 
@@ -70,10 +70,11 @@ class Server:
                 try:                    
                     result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance)],address)
                     if result: 
-                        self.__join_ring((self.serverIpAddr, core.RING_PORT))
                         break
                 except Exception as err:
                     print(err)    
+            
+            self.__join_ring((self.serverIpAddr, core.RING_PORT))
 
         proccesses = []
         try:
@@ -408,7 +409,7 @@ def main():
         Server0 = Server(0, argList[2])
         p0 = Server0.run_server()
     elif argList[1] == '1':
-        Server1 = Server(1, argList[2],nd.Data_node,('data_nodes', None, False, 'songs'))
+        Server1 = Server(1, argList[2],nd.Data_node,('data_nodes', None, True, 'songs'))
         p1 = Server1.run_server()
     elif argList[1] == '2':
         Server2 = Server(2, argList[2],nd.DNS_node,())
