@@ -446,15 +446,16 @@ class DNS_node(Role_node):
                 continue
             for label in data:
                 for rec in data[label]:
-                    if core.send_ping_to(rec['data']):
+                    ping = core.send_ping_to(rec['data'])
+                    if ping:
+                        print('ping to ',rec['data'],'success')
                         if time.time() - rec['start_time'] >= rec['ttl']:
                             rec['start_time'] = time.time()
                             print('Updated TTL for ', rec['data'])
                     else: 
-                        print('\n Record to remove', rec)
+                        print('ping to ',rec['data'],'failed')
                         data[label].remove(rec) # TODO: test remove() method
-                        print('Records after removing: ', data[label])
-                        
+
             path = "dns_records"        
             try:
                 files = os.listdir(path)

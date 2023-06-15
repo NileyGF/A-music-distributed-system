@@ -17,9 +17,9 @@ class Server:
     serverIpAddr = ""
     # Will be re-assigned by constructor.
     serverNumber = 1
-    next_neighbor = None
-    second_neighbor = None
-    back_neighbor = None   
+    # next_neighbor = None
+    # second_neighbor = None
+    # back_neighbor = None   
 
     def __init__(self, serverNumber, serverIpAddr, role:nd.Role_node=None, args:tuple=()):
 
@@ -31,11 +31,16 @@ class Server:
                               'FallenNode':self.fallen_node,        # Fallen Node
                               'Unbalance':self.unbalanced_ring,     # Unbalanced Roles
                              }
+        manager = multiprocessing.Manager()
+        self.ring_links = manager.list()
+        self.ring_links.append(None)
+        self.ring_links.append(None)
+        self.ring_links.append(None)
         
         multiprocessing.set_start_method('fork', force=True)
-        self.accept_proccess = multiprocessing.Process(target=self.init_socket)
-        self.ring_proccess = multiprocessing.Process(target=self.ring_handler)
-        self.ping_next_proccess= multiprocessing.Process(target=self.ping_next)
+        self.accept_process = multiprocessing.Process(target=self.init_socket)
+        self.ring_process = multiprocessing.Process(target=self.ring_handler)
+        self.ping_next_process= multiprocessing.Process(target=self.ping_next)
 
         self.serverNumber = serverNumber
         self.serverIpAddr = serverIpAddr
@@ -47,14 +52,14 @@ class Server:
 
 
     def run_server(self):
-        if self.accept_proccess.is_alive():
-            self.accept_proccess.terminate()
-            self.accept_proccess.join()
+        if self.accept_process.is_alive():
+            self.accept_process.terminate()
+            self.accept_process.join()
         multiprocessing.set_start_method('fork', force=True)
-        self.accept_proccess = multiprocessing.Process(target=self.init_socket)
-        self.accept_proccess.start()
-        # self.accept_proccess.join()
-        return self.accept_proccess
+        self.accept_process = multiprocessing.Process(target=self.init_socket)
+        self.accept_process.start()
+        # self.accept_process.join()
+        return self.accept_process
 
     def init_socket(self):
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -63,7 +68,7 @@ class Server:
         self.serverSocket.bind(address)
         print(address)
         self.serverSocket.listen(5)
-        self.liveStatus = "Alive"
+        # self.liveStatus = "Alive"
         if not isinstance(self.role_instance,nd.DNS_node):
             # if not DNS: join ring and subscribe to DNS
             while True:
@@ -76,7 +81,7 @@ class Server:
             
             self.__join_ring((self.serverIpAddr, core.RING_PORT))
 
-        proccesses = []
+        processes = []
         try:
             while True:                
                 conn, address = self.serverSocket.accept()
@@ -84,12 +89,11 @@ class Server:
                 multiprocessing.set_start_method('fork', force=True)
                 p = multiprocessing.Process(
                     target=self.attend_connection, args=(conn, address))
-                proccesses.append(p)
+                processes.append(p)
                 p.start()
-                # p.join()
         finally:
             self.serverSocket.close()
-            for p in proccesses:
+            for p in processes:
                 if p.is_alive():
                     p.terminate()
                     p.join()
@@ -105,6 +109,7 @@ class Server:
             print('received: ', decoded)
             # check if it is a server action
             if self.serverHeaders.get(decoded[0]):
+                print('Ring Handler')
                 handler = self.serverHeaders.get(decoded[0])
                 response = handler(decoded[1],connection,address)
             # else, if it isn't a role action, send FAILED REQUEST
@@ -113,6 +118,7 @@ class Server:
                 encoded = pickle.dumps(response)
                 core.send_bytes_to(encoded,connection,False)
             else:
+                print('Role Handler')
                 handler = self.role_instance.headers.get(decoded[0])
                 response = handler(decoded[1],connection,address)
 
@@ -168,50 +174,61 @@ class Server:
                 continue
 
     def __join_ring(self,address:tuple):
-        group_members = core.get_addr_from_dns(nd.domains_by_role[str(self.role_instance)])
-        for node in group_members:
-            try:
-                request = tuple(['ReqJRing',address,core.TAIL])
-                encoded = pickle.dumps(request)
-                sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-                sock.connect(node)
+        data_nodes = core.get_addr_from_dns('distpotify.data')
+        router_nodes = core.get_addr_from_dns('distpotify.router')
+        print(data_nodes, router_nodes)
 
-                sended, _ = core.send_bytes_to(encoded, sock, False)
-                if sended == 'OK':
-                    result = core.receive_data_from(sock)
-                    decoded = pickle.loads(result)
-                    # Send ACK
-                    ack = pickle.dumps(core.ACK_OK_tuple)
-                    core.send_bytes_to(ack,sock,False)
+        for nodes_list in [data_nodes, router_nodes]:
+            if nodes_list == None:  continue
+            for node in nodes_list:
+                if node[0] == self.serverIpAddr: continue
+                try:
+                    request = tuple(['ReqJRing',address,core.TAIL])
+                    encoded = pickle.dumps(request)
+                    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                    sock.connect(node)
+
+                    sended, _ = core.send_bytes_to(encoded, sock, False)
+                    if sended == 'OK':
+                        result = core.receive_data_from(sock)
+                        decoded = pickle.loads(result)
+                        # Send ACK
+                        ack = pickle.dumps(core.ACK_OK_tuple)
+                        core.send_bytes_to(ack,sock,False)
+                        sock.close()
+
+                        if 'JRingAt' in decoded:
+                            # 'JRingAt',(self.next_neighbor,self.second_neighbor)
+                            links = decoded[1]
+                            if links[0] == None:
+                                # the ring is open
+                                self.ring_links[1] = (node[0],core.RING_PORT)
+                                self.ring_links[2] = None
+                                self.ring_links[0] = (node[0],core.RING_PORT)
+                                print('the ring is open. ', self.ring_links)
+                            else:
+                                self.ring_links[1] = (links[0][0],core.RING_PORT)
+                                self.ring_links[2]= (links[1][0],core.RING_PORT)
+                                self.ring_links[0] = (node[0],core.RING_PORT)
+                                print(self.ring_links)
+
+                            self.ring_process = multiprocessing.Process(target=self.ring_handler)
+                            self.ring_process.start()
+                            return
+
+                except Exception as er:
+                    print(er)
                     sock.close()
+                    continue
 
-                    if 'JRingAt' in decoded:
-                        # 'JRingAt',(self.next_neighbor,self.second_neighbor)
-                        links = decoded[1]
-                        if links[0] == None:
-                            # the ring is open
-                            self.next_neighbor = (node[0],core.RING_PORT)
-                            self.second_neighbor = None
-                            self.back_neighbor = (node[0],core.RING_PORT)
-                        else:
-                            self.next_neighbor = (links[0][0],core.RING_PORT)
-                            self.second_neighbor = (links[1][0],core.RING_PORT)
-                            self.back_neighbor = (node[0],core.RING_PORT)
-
-                        self.ring_proccess.start()
-                        return
-
-            except:
-                sock.close()
-                continue
-
-        if len(group_members) == 0:
-            # TODO try with the other group
-            pass
-        raise Exception("Couldn't join ring!!!")
+        # self.ring_process = multiprocessing.Process(target=self.ring_handler)
+        # self.ring_process.start()
+        print("Couldn't join ring!!!")
 
     def __requested_join(self,address:tuple,connection:socket,conn_address:str):
-        response = tuple(['JRingAt',(self.next_neighbor,self.second_neighbor),core.TAIL])
+        if address[0] == self.serverIpAddr:
+            raise Exception('Why am I asking to myself???')
+        response = tuple(['JRingAt',(self.ring_links[1],self.ring_links[2]),core.TAIL])
         encoded = pickle.dumps(response)
 
         state = core.send_bytes_to(encoded,connection,False)
@@ -222,20 +239,32 @@ class Server:
 
             if 'ACK' in decoded:
                 # change my references only if the new next_neighbor received OK
-                self.second_neighbor = self.next_neighbor
-                self.next_neighbor = address
-                print('new links: ', self.next_neighbor, ' --> ', self.second_neighbor)
+                if self.ring_links[1] == None:
+                    # I'm not in ring
+                    self.ring_process = multiprocessing.Process(target=self.ring_handler)
+                    self.ring_process.start()
+                self.ring_links[2] = self.ring_links[1]
+                self.ring_links[1] = address
+                print('new links: ', self.ring_links)
+                
                 return True
             
         return False
+    
 
     def ring_handler(self):
-        self.ping_next_proccess.start()
 
         self.ringSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ringSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.ringSocket.bind((self.serverIpAddr, core.RING_PORT))
-        proccesses = []
+        address = (self.serverIpAddr, core.RING_PORT)
+        self.ringSocket.bind(address)
+        print(address)
+        self.ringSocket.listen(5)
+
+        self.ping_next_process= multiprocessing.Process(target=self.ping_next)
+        self.ping_next_process.start()
+
+        processes = []
         try:
             while True:                
                 conn, address = self.ringSocket.accept()
@@ -243,56 +272,67 @@ class Server:
                 multiprocessing.set_start_method('fork', force=True)
                 p = multiprocessing.Process(
                     target=self.attend_connection, args=(conn, address))
-                proccesses.append(p)
+                processes.append(p)
                 p.start()
-                # p.join()
         finally:
             self.serverSocket.close()
-            for p in proccesses:
+            for p in processes:
                 if p.is_alive():
                     p.terminate()
                     p.join()
+            if self.ping_next_process.is_alive():
+                    self.ping_next_process.terminate()
+                    self.ping_next_process.join()
+
 
     def ping_next(self):
         while True:
             time.sleep(7)
+            print('trying to ping next')
             request = tuple(['ReportNext',None,core.TAIL])
             encoded = pickle.dumps(request)
             sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
             try:
-                sock.connect(self.next_neighbor)
+                sock.connect(self.ring_links[1])
                 sended, _ = core.send_bytes_to(encoded, sock, False)
                 if sended == 'OK':
                     result = core.receive_data_from(sock)
                     decoded = pickle.loads(result)
                     sock.close()
-
+                    print(decoded)
                     if 'ACK' in decoded:
                         if 'OK' in decoded:
                             # ring is stable here
+                            print('ring stable')
                             continue
                         else:
+                            print("I'm not his previous. So there was a desconnection")
                             # I'm not his previous. So there was a desconnection
                             self.__join_ring((self.serverIpAddr, core.RING_PORT))
                             return
                             
-            except:
+            except Exception as er:
+                print(er)
                 # next_neighbor is fallen, or I'm fallen
                 sock.close() #??? 
                 try:
-                    sock.connect(self.second_neighbor)
+                    sock.connect(self.ring_links[2])
                     # next_neighbor is fallen 'FallenNode'
                     request = tuple(['FallenNode',[[(self.serverIpAddr,core.RING_PORT),self.role_instance.__str__()]],core.TAIL])
                     encoded = pickle.dumps(request)
                     sended, _ = core.send_bytes_to(encoded, sock, False)
-                except:
+                except Exception as er:
+                    print(er)
                     # It must be me the disconnected one
                     sock.close() #??? 
                     self.__join_ring((self.serverIpAddr, core.RING_PORT))
                     return
                     
     def back_reporting(self, request_data, connection, address):
-        if address[0] != self.back_neighbor[0]:
+        if self.ring_links[0] == None:
+            self.ring_links[0] = (address[0],core.RING_PORT)
+            print('update back_neighbor',self.ring_links[0])
+        if address[0] != self.ring_links[0][0]:
             # the ping is not from my back neighbor
             reply = tuple(["ACK","Discontinuity in Ring",core.TAIL])
         else: 
@@ -313,12 +353,12 @@ class Server:
         if add_self:
             sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
             try:
-                sock.connect(self.next_neighbor)
+                sock.connect(self.ring_links[1])
             except:
                 # next_neighbor is fallen, or I'm fallen
                 sock.close() #??? 
                 try:
-                    sock.connect(self.second_neighbor)
+                    sock.connect(self.ring_links[2])
                 except:
                     # It must be me the disconnected one
                     sock.close() #??? 
@@ -352,12 +392,12 @@ class Server:
             
             sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
             try:
-                sock.connect(self.next_neighbor)
+                sock.connect(self.ring_links[1])
             except:
                 # next_neighbor is fallen, or I'm fallen
                 sock.close() #??? 
                 try:
-                    sock.connect(self.second_neighbor)
+                    sock.connect(self.ring_links[2])
                 except:
                     # It must be me the disconnected one
                     sock.close() #??? 
@@ -367,8 +407,7 @@ class Server:
             encoded = pickle.dumps(request)
             sended, _ = core.send_bytes_to(encoded, sock, False)
             return sended == 'OK'
-            
-
+         
     def unbalanced_ring(self, request_data, connection, address):
         request = tuple(["Unbalance",request_data ,core.TAIL])
         encoded = pickle.dumps(request)
@@ -379,12 +418,12 @@ class Server:
             return True
         sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         try:
-            sock.connect(self.next_neighbor)
+            sock.connect(self.ring_links[1])
         except:
             # next_neighbor is fallen, or I'm fallen
             sock.close() #??? 
             try:
-                sock.connect(self.second_neighbor)
+                sock.connect(self.ring_links[2])
             except:
                 # It must be me the disconnected one
                 sock.close() #??? 

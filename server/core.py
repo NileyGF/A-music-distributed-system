@@ -142,7 +142,7 @@ def send_addr_to_dns(domain:str, address:tuple, ttl:int=60):
     return False
     
 def send_ping_to(address:tuple,data=None):
-    """Send a ping message to address <ip:port>"""
+    """Send a ping message to address (ip, port)"""
     try: 
         messag = tuple([PING_tuple[0],data,PING_tuple[2]])
         pickled_data = pickle.dumps(messag)
@@ -154,18 +154,20 @@ def send_ping_to(address:tuple,data=None):
         send_bytes_to(pickled_data,sock,False)
         result = receive_data_from(sock,waiting_time_ms=3000,iter_n=3)
         decoded = pickle.loads(result)
-    
-        if 'echoreply' in decoded:
+        if 'echoreplay' in decoded:
+            sock.close()
             return True
-    except:
-        pass
+    except Exception as err :
+        print('ping error: ',err)
+    sock.close()
     return False
 
 def send_echo_replay(ping_data,connection:socket.socket,address):
     """answer a ping message"""
     pickled_data = pickle.dumps(ECHO_REPLAY)
     state, _ = send_bytes_to(pickled_data,connection,False)
-    if state == 'OK': return True
+    if state == 'OK': 
+        return True
     return False
 
 
