@@ -1,3 +1,4 @@
+from tkinter import messagebox
 from customtkinter import CTk, CTkFrame, CTkEntry, CTkButton, CTkCheckBox,CTkLabel
 
 import tkinter as tk
@@ -7,6 +8,9 @@ import os
 import requests
 import json
 import pygame
+import math
+
+from client import client_class
 
 class ScrolledListbox(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
@@ -89,6 +93,9 @@ class Form(CTk):
     def __init__(self):
         CTk.__init__(self)
         
+        self.client=client_class.Client()
+        pygame.mixer.init()
+        
         self.purple='#7f5af0'
         self.green='#2cb67d'
         self.black='#010101'
@@ -108,7 +115,7 @@ class Form(CTk):
         
         CTkLabel(self,image=logo,text="").grid(columnspan=2,row=0,column=0,padx=12,pady=10,sticky='N')
     
-    # root.call('wm','iconphoto',root._w,logo)
+        # root.call('wm','iconphoto',root._w,logo)
 
         self.btn_download = None
         self.btn_play = None
@@ -116,6 +123,8 @@ class Form(CTk):
         self.btn_load = None
 
         self.list_box = None
+        
+        song_list=None
         
         self.set_size(frame)
         
@@ -172,59 +181,74 @@ class Form(CTk):
         self.btn_play       # Acción para reproducir una canción
         self.btn_load       # Acción para cargar una canción
 
-        self.list_box.bind('<<ListboxSelect>>', self.on_listbox_select)
+        # self.list_box.bind('<<ListboxSelect>>', self.on_listbox_select)
         self.btn_download.bind('<Button>', self.on_download_click)
         self.btn_play.bind('<Button>', self.on_play_click)
+        self.btn_load.bind('<Button>', self.on_load_click)
+        self.btn_stop.bind('<Button>', self.on_stop_click)
 
-    def on_listbox_select(self, event):
-        song_id = self.list_box.item[0, 'song_id']
-        self.play_song(song_id)
+    # def on_listbox_select(self, event):
+    #     song_id = self.list_box.item[0, 'song_id']
+    #     self.play_song(song_id)
     
     def on_download_click(self, event):
-        song_id = self.list_box.item[0, 'song_id']
-        self.download_song(song_id)
+        selected_song = self.list_box.curselection()
+        duration_sec = selected_song[4] / 1000 
+        number_of_chunks:float = duration_sec / selected_song[5]
+        number_of_chunks = math.ceil(number_of_chunks)
+        self.download_song(selected_song[0], number_of_chunks)
     
     def on_play_click(self, event):
-        song_id = self.list_box.item[0, 'song_id']
-        self.play_song(song_id)
-    
-    def search_songs(query):
-        response = requests.get(f'http://localhost:3001/api/search?q={query}') #que tenga como entrada el ip.... NILEY
-        return response.json()
-    
+        selected_song = self.list_box.curselection()
+        duration_sec = selected_song[4] / 1000 
+        number_of_chunks:float = duration_sec / selected_song[5]
+        number_of_chunks = math.ceil(number_of_chunks)
+        self.play_song(selected_song[0], number_of_chunks)
     
     
-    def play_song(song_id):
-        # Reemplaza 'song_id' con el ID de la canción que deseas reproducir
-        song_id = 1
+    def on_stop_click(self,events):
+        pygame.mixer.music.stop()
+        
+    def on_load_click(self,events):
+        
+        self.list_box.delete(0,END)
+        self.client.refresh_song_list()
+        song_list = self.client.song_list()
+        
+        for i, sl in enumerate(song_list):
+            self.list_box.insert(i,sl)
     
-        pygame.mixer.init()
-        pygame.mixer.music.load('ruta/al/archivo/de/la/cancion.mp3')
-        pygame.mixer.music.play()
+    # def search_songs(query):
+    #     response = requests.get(f'http://localhost:3001/api/search?q={query}') #que tenga como entrada el ip.... NILEY
+    #     return response.json()
+    
+    
+    
+    def play_song(self,song_id, number_of_chunks):
+        
+        for i in range(number_of_chunks):
+            if i < 10:
+                cs = '00'+ str(i)
+            elif i < 100:
+                cs = '0' + str(i)
+            try: 
+                pygame.mixer.music.load(f'{song_id}_dice_{cs}.mp3')
+            except:
+                chunk = self.client.request_song_from(song_id, i*10*1000)
+                pygame.mixer.music.load(f'{song_id}_dice_{cs}.mp3')
+            pygame.mixer.music.play()
     
         # Puedes agregar un bucle para detener la reproducción después de un tiempo específico
         # while pygame.mixer.music.get_busy():
         #     time.sleep(1)
-        
-    def get_song_info(song_id):
-        response = requests.get(f'http://localhost:3001/api/songs/{song_id}')
-        return response.json()
     
-    def download_song(song_id):
-        song_info = self.get_song_info(song_id)
-        song_url = song_info['url']
     
-        if song_url:
-            response = requests.get(song_url)
-            with open(f'{song_id}.mp3', 'wb') as f:
-                f.write(response.content)
-            print(f'Cancion {song_id} descargada y guardada en {song_id}.mp3')
-        else:
-            print(f'No se encontró la URL de la cancion {song_id}')
+    def download_song(self,song_id, number_of_chunks):
+        if not self.client.request_song(song_id, number_of_chunks):
+            messagebox.showerror('Error', 'No se pudo descargar la canción')
+            return
+
     
-
-
-
 if __name__ == '__main__':
     # root = Form()
     # root.wm_title('Music')
@@ -232,5 +256,5 @@ if __name__ == '__main__':
     root=Form()
     
     root.title('Distributed Spotify')
-
+    
     root.mainloop()

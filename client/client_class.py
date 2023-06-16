@@ -98,8 +98,12 @@ class Client:
                 core.send_bytes_to(ack_encoded,client_sock,False)
 
                 if 'Schunk' in rs_decoded:
-                    # rs_decoded[1].export(f"{song_id}_dice{i}.mp3", format='mp3')
-                    with open(f'{song_id}_dice_{i}.mp3','wb') as f:
+                    if i < 10:
+                        cs = '00'+ str(i)
+                    elif i < 100:
+                        cs = '0' + str(i)
+                    id_chunk = str(song_id) + '_dice_' + cs
+                    with open(f'cache/{id_chunk}.mp3','wb') as f:
                         f.write(rs_decoded[1])
 
             client_sock.close()
@@ -128,8 +132,15 @@ class Client:
             # Send ACK
             core.send_bytes_to(ack_encoded,client_sock,False)
 
+            i=int((start_from_ms/1000)//10)
             if 'Schunk' in rs_decoded:
-                rs_decoded[1].export(f"{song_id}_dice{start_from_ms}.mp3", format='mp3')
+                if i < 10:
+                    cs = '00'+ str(i)
+                elif i < 100:
+                    cs = '0' + str(i)
+                id_chunk = str(song_id) + '_dice_' + cs
+                with open(f'cache/{id_chunk}.mp3','wb') as f:
+                    f.write(rs_decoded[1])
                 client_sock.close()
                 return True
         except Exception as err:
