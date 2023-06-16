@@ -14,3 +14,6 @@ sqlite3
 io
 mutagen
 glob
+tk
+customtkinter
+pygame
