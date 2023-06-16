@@ -45,8 +45,10 @@ class Server:
         self.serverNumber = serverNumber
         self.serverIpAddr = serverIpAddr
         # self.role_instance = nd.Role_node(self.serverNumber)
+        self.role_instance = manager.list()
+        self.role_instance.append(None)
         if role != None:
-            self.role_instance = role(serverNumber,*args)
+            self.role_instance[0] = role(serverNumber,*args)
         else:
             self.__get_role()
 
@@ -64,16 +66,16 @@ class Server:
     def init_socket(self):
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        address = (self.serverIpAddr, nd.ports_by_role[str(self.role_instance)])
+        address = (self.serverIpAddr, nd.ports_by_role[str(self.role_instance[0])])
         self.serverSocket.bind(address)
         print(address)
         self.serverSocket.listen(5)
         # self.liveStatus = "Alive"
-        if not isinstance(self.role_instance,nd.DNS_node):
+        if not isinstance(self.role_instance[0],nd.DNS_node):
             # if not DNS: join ring and subscribe to DNS
             while True:
                 try:                    
-                    result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance)],address)
+                    result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance[0])],address)
                     if result: 
                         break
                 except Exception as err:
@@ -113,13 +115,13 @@ class Server:
                 handler = self.serverHeaders.get(decoded[0])
                 response = handler(decoded[1],connection,address)
             # else, if it isn't a role action, send FAILED REQUEST
-            elif not self.role_instance.headers.get(decoded[0]):
+            elif not self.role_instance[0].headers.get(decoded[0]):
                 response = core.FAILED_REQ
                 encoded = pickle.dumps(response)
                 core.send_bytes_to(encoded,connection,False)
             else:
                 print('Role Handler')
-                handler = self.role_instance.headers.get(decoded[0])
+                handler = self.role_instance[0].headers.get(decoded[0])
                 response = handler(decoded[1],connection,address)
 
         except Exception as err:
@@ -145,7 +147,7 @@ class Server:
             pass
         # router role
         if role == 1:
-            self.role_instance = nd.Router_node()
+            self.role_instance[0] = nd.Router_node()
             return
         # data role
         for dn in data_nodes:
@@ -166,7 +168,7 @@ class Server:
 
                     if 'SolInit' in decoded:
                         args = decoded[1]
-                        self.role_instance = nd.Data_node(n_data+1,*args)
+                        self.role_instance[0] = nd.Data_node(n_data+1,*args)
                         return
 
             except:
@@ -318,7 +320,7 @@ class Server:
                 try:
                     sock.connect(self.ring_links[2])
                     # next_neighbor is fallen 'FallenNode'
-                    request = tuple(['FallenNode',[[(self.serverIpAddr,core.RING_PORT),self.role_instance.__str__()]],core.TAIL])
+                    request = tuple(['FallenNode',[[(self.serverIpAddr,core.RING_PORT),self.role_instance[0].__str__()]],core.TAIL])
                     encoded = pickle.dumps(request)
                     sended, _ = core.send_bytes_to(encoded, sock, False)
                 except Exception as er:
@@ -365,7 +367,7 @@ class Server:
                     self.__join_ring((self.serverIpAddr, core.RING_PORT))
                     return False
                 
-            alives = request_data.append([(self.serverIpAddr,core.RING_PORT),self.role_instance.__str__()])
+            alives = request_data.append([(self.serverIpAddr,core.RING_PORT),self.role_instance[0].__str__()])
             request = tuple(['FallenNode',alives,core.TAIL])
             encoded = pickle.dumps(request)
             sended, _ = core.send_bytes_to(encoded, sock, False)
@@ -385,7 +387,7 @@ class Server:
             elif n_router < 2 and n_data > 2: 
                 request = tuple(["Unbalance","Router_node",core.TAIL])
             
-            if self.role_instance.__str__() != request[1]:
+            if self.role_instance[0].__str__() != request[1]:
                 # I can solve the unbalance
                 self.__get_role()
                 return True
@@ -412,7 +414,7 @@ class Server:
         request = tuple(["Unbalance",request_data ,core.TAIL])
         encoded = pickle.dumps(request)
             
-        if self.role_instance.__str__() != request_data:
+        if self.role_instance[0].__str__() != request_data:
             # I can solve the unbalance
             self.__get_role()
             return True
