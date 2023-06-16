@@ -1,12 +1,7 @@
 from tkinter import messagebox
-from customtkinter import CTk, CTkFrame, CTkEntry, CTkButton, CTkCheckBox,CTkLabel
+from customtkinter import CTk, CTkFrame, CTkEntry, CTkButton,CTkLabel
 
 import tkinter as tk
-from tkinter import *
-import tkinter.ttk as ttk
-import os
-import requests
-import json
 import pygame
 import math
 
@@ -111,7 +106,7 @@ class Form(CTk):
         frame.columnconfigure([0,1],weight=1)
         frame.rowconfigure([0,1,2,3,4,5],weight=1)
             
-        logo=PhotoImage(file='/Users/josue/Downloads/Dist/d_system/A-music-distributed-system/app/images/logo.png')
+        logo=tk.PhotoImage(file='/Users/josue/Downloads/Dist/d_system/A-music-distributed-system/app/images/logo.png')
         
         CTkLabel(self,image=logo,text="").grid(columnspan=2,row=0,column=0,padx=12,pady=10,sticky='N')
     
@@ -146,7 +141,7 @@ class Form(CTk):
         self.btn_load.grid(columnspan=2, row=4, pady=4, padx=4, sticky="s")
     
         # Listbox para mostrar las canciones disponibles
-        self.list_box = ScrolledListbox(frame, selectmode=MULTIPLE)
+        self.list_box = ScrolledListbox(frame, selectmode=tk.MULTIPLE)
         self.list_box.grid(columnspan=2, row=2, padx=4, pady=4, sticky="nsew")
     
         # Cuadro de texto para buscar canciones
@@ -211,7 +206,7 @@ class Form(CTk):
         
     def on_load_click(self,events):
         
-        self.list_box.delete(0,END)
+        self.list_box.delete(0,tk.END)
         self.client.refresh_song_list()
         song_list = self.client.song_list()
         
