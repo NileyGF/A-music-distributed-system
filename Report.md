@@ -50,37 +50,16 @@ Además todos los nodos, al unirse al anillo crean un subproceso de supervisión
 
 - **Estado interno**: Los servidores carecen de información interna relacionada con el estado de los usuarios o conversaciones previas. Por tanto, no almacenan información personalizada sobre los usuarios.
 
-## Servidores de nombre (DNS)
+## Servidor de nombre (DNS)
+El nodo de DNS gestiona registros de tipo A. Un registro A posee los siguientes campos: label (nombre del recurso, en nuestro caso el dominio `dispotify.data`, `dispotify.router`, etc ); tipo (tipo de información, en nuestro caso A, que significa IPv4); clase (usualmente omitida ya que se utiliza solo `IN`); TTL (time to live, cantidad de tiempo que debe ser guardado el registro) y datos (datos reales del registro, osea, dirección: (IP, puerto) ).
 
+Al inicializarce una instancia se crea un diccionario de 'headers' que por cada solicitud que puede recibir tiene como valor la función que la maneja. También empieza un subproceso para actualizar los registros basándose en sus valores de TTL.
 
-Ventajas
+## Coordinación
+Decidimos implementar una arquitectura descentralizada de anillo sin líder (explicada anteriormente). Dónde cualquiera puede insertar nuevos nodos al anillo y puede ejercer de Manager temporal si detecta una desconexión. Esta decisión está encaminada a no crear puntos de fallas extras ya que la existencia de un líder añade seguridad y robustez al sistema si y solo si el líder no se cae, porque en esos casos surge un nuevo problema. 
 
-Se puede lograr una gran tolerancia a fallas (Ej: el envío del
-comando ping para determinar si un cliente está disponible)
-
-Desventajas
-
-No es propicio para lograr un gran escalabilidad. Existe un
-control centralizado, en los skeleton, de las referencias.
-
-## Sincronización
-cosas de reloj
-## Elección
-anillo
-
-Se supone que los nodos están ordenados en una anillo
-lógico (Ej: en orden creciente de identificadores).
-2 Cuando un nodo quiere elegir nuevo líder envía
-ELECCION por el anillo (al siguiente del anillo que esté
-vivo que debe confirmar).
-3 Cada nodo que recibe el mensaje incluye su propio ID en
-el mensaje.
-4 Cuando el mensaje llega de vuelta al iniciador contiene los
-IDs de todos los nodos participantes. En este momento
-envía un mensaje LIDER por el anillo avisando del nuevo
-líder (el nodo mayor).
 ## Transacciones en la base de datos
-
+Los nodos de acceso a datos utilizan operaciones de transacción al acceder y modificar la base de datos. 
 ## Replicación y consistencia
 ## Balance de cargas
 ## Tolerancia a fallas
