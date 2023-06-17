@@ -5,7 +5,7 @@ import tkinter as tk
 import pygame
 import math
 
-from client import client_class
+import client_class
 
 class ScrolledListbox(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
@@ -106,7 +106,7 @@ class Form(CTk):
         frame.columnconfigure([0,1],weight=1)
         frame.rowconfigure([0,1,2,3,4,5],weight=1)
             
-        logo=tk.PhotoImage(file='/Users/josue/Downloads/Dist/d_system/A-music-distributed-system/app/images/logo.png')
+        logo=tk.PhotoImage(file='/home/akeso/Documents/VSCode/A-music-distributed-system/client/images/logo.png')
         
         CTkLabel(self,image=logo,text="").grid(columnspan=2,row=0,column=0,padx=12,pady=10,sticky='N')
     
@@ -125,7 +125,7 @@ class Form(CTk):
         
         self.create_widgets(frame)
         
-        self.set_widgets_actions()
+        # self.set_widgets_actions()
 
     def set_size(frame, sheight: int = 610, swidth: int = 800):
         frame.geometry('500x600+350+20')
@@ -137,7 +137,7 @@ class Form(CTk):
     
     def create_widgets(self, frame):
         # Botón para cargar una canción
-        self.btn_load = CTkButton(frame, border_color=self.green, fg_color=self.black, hover_color=self.green, corner_radius=12, border_width=2, text='Cargar', height=40)
+        self.btn_load = CTkButton(frame, border_color=self.green, fg_color=self.black, hover_color=self.green, corner_radius=12, border_width=2, text='Cargar', height=40,command=self.on_load_click)
         self.btn_load.grid(columnspan=2, row=4, pady=4, padx=4, sticky="s")
     
         # Listbox para mostrar las canciones disponibles
@@ -153,15 +153,15 @@ class Form(CTk):
         button_frame.grid(columnspan=2, row=6, pady=4, padx=4, sticky="s")
     
         # Botón para descargar una canción
-        self.btn_download = CTkButton(button_frame, border_color=self.green, fg_color=self.black, hover_color=self.green, corner_radius=12, border_width=2, text='Descargar', height=40)
+        self.btn_download = CTkButton(button_frame, border_color=self.green, fg_color=self.black, hover_color=self.green, corner_radius=12, border_width=2, text='Descargar', height=40,command=self.on_download_click)
         self.btn_download.pack(side="left", padx=4, pady=4)
     
         # Botón para reproducir una canción
-        self.btn_play = CTkButton(button_frame, border_color=self.green, fg_color=self.black, hover_color=self.green, corner_radius=12, border_width=2, text='Reproducir', height=40)
+        self.btn_play = CTkButton(button_frame, border_color=self.green, fg_color=self.black, hover_color=self.green, corner_radius=12, border_width=2, text='Reproducir', height=40,command=self.on_play_click)
         self.btn_play.pack(side="left", padx=4, pady=4)
     
         # Botón para parar una canción
-        self.btn_stop = CTkButton(button_frame, border_color=self.green, fg_color=self.black, hover_color=self.green, corner_radius=12, border_width=2, text='Parar', height=40)
+        self.btn_stop = CTkButton(button_frame, border_color=self.green, fg_color=self.black, hover_color=self.green, corner_radius=12, border_width=2, text='Parar', height=40,command=self.on_stop_click)
         self.btn_stop.pack(side="left", padx=4, pady=4)
     
         # Configuración de la fila y la columna central
@@ -171,29 +171,29 @@ class Form(CTk):
         # # Configuración de la ventana principal
         # self.pack(fill="both", expand=True)
    
-    def set_widgets_actions(self):
-        self.btn_download  # Acción para descargar una canción
-        self.btn_play       # Acción para reproducir una canción
-        self.btn_load       # Acción para cargar una canción
+    # def set_widgets_actions(self):
+    #     self.btn_download  # Acción para descargar una canción
+    #     self.btn_play       # Acción para reproducir una canción
+    #     self.btn_load       # Acción para cargar una canción
 
-        # self.list_box.bind('<<ListboxSelect>>', self.on_listbox_select)
-        self.btn_download.bind('<Button>', self.on_download_click)
-        self.btn_play.bind('<Button>', self.on_play_click)
-        self.btn_load.bind('<Button>', self.on_load_click)
-        self.btn_stop.bind('<Button>', self.on_stop_click)
+    #     # self.list_box.bind('<<ListboxSelect>>', self.on_listbox_select)
+    #     self.btn_download.bind('<Button>', self.on_download_click)
+    #     self.btn_play.bind('<Button>', self.on_play_click)
+    #     self.btn_load.bind('<Button>', self.on_load_click)
+    #     self.btn_stop.bind('<Button>', self.on_stop_click)
 
     # def on_listbox_select(self, event):
     #     song_id = self.list_box.item[0, 'song_id']
     #     self.play_song(song_id)
     
-    def on_download_click(self, event):
+    def on_download_click(self):
         selected_song = self.list_box.curselection()
         duration_sec = selected_song[4] / 1000 
         number_of_chunks:float = duration_sec / selected_song[5]
         number_of_chunks = math.ceil(number_of_chunks)
         self.download_song(selected_song[0], number_of_chunks)
     
-    def on_play_click(self, event):
+    def on_play_click(self):
         selected_song = self.list_box.curselection()
         duration_sec = selected_song[4] / 1000 
         number_of_chunks:float = duration_sec / selected_song[5]
@@ -201,10 +201,10 @@ class Form(CTk):
         self.play_song(selected_song[0], number_of_chunks)
     
     
-    def on_stop_click(self,events):
+    def on_stop_click(self):
         pygame.mixer.music.stop()
         
-    def on_load_click(self,events):
+    def on_load_click(self):
         
         self.list_box.delete(0,tk.END)
         self.client.refresh_song_list()

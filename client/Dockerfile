@@ -8,9 +8,13 @@ RUN pip3 install -r requirements.txt
 
 RUN pip3 install pydub
 RUN pip3 install mutagen
-RUN sudo apt-get install tk
-RUN sudo apt-get install python3-tk
+RUN apt-get update && \
+    apt-get install -y python3-tk
+RUN pip install customtkinter
+RUN pip install pygame
+RUN apt-get install libglib2.0-dev
 
+ENV DISPLAY=127.0.0.1:0.0
 
 COPY . .
 
