@@ -42,7 +42,7 @@ Además todos los nodos, al unirse al anillo crean un subproceso de supervisión
 
 ## Características generales de los servidores: 
 
-- **Concurrencia**: Los servidores tienen la capacidad de manejar varias solicitudes simultáneamente. Al ser creados y establecer su role, designan un proceso que espera solicitudes y ante la llegada de una petición se crea otro proceso que se encarga de manejarla.
+- **Concurrencia**: Los servidores tienen la capacidad de manejar varias solicitudes simultáneamente gracias a su diseño multiproceso. Al ser creados y establecer su role, designan un proceso que espera solicitudes y ante la llegada de una petición se crea otro proceso que se encarga de manejarla.
 
 - **Localización**: El punto de entrada para las conexiones es desconocido y se resuelve mediante un servicio de nombres (lo que implica que todos conozcan la dirección del DNS).
 
@@ -51,110 +51,72 @@ Además todos los nodos, al unirse al anillo crean un subproceso de supervisión
 - **Estado interno**: Los servidores carecen de información interna relacionada con el estado de los usuarios o conversaciones previas. Por tanto, no almacenan información personalizada sobre los usuarios.
 
 ## Servidor de nombre (DNS)
-El nodo de DNS gestiona registros de tipo A. Un registro A posee los siguientes campos: label (nombre del recurso, en nuestro caso el dominio `dispotify.data`, `dispotify.router`, etc ); tipo (tipo de información, en nuestro caso A, que significa IPv4); clase (usualmente omitida ya que se utiliza solo `IN`); TTL (time to live, cantidad de tiempo que debe ser guardado el registro) y datos (datos reales del registro, osea, dirección: (IP, puerto) ).
+El nodo de DNS gestiona registros de tipo A. Un registro A posee los siguientes campos: 
+
+    label (nombre del recurso, en nuestro caso el dominio `dispotify.data`, `dispotify.router`, etc ); 
+
+    tipo (tipo de información, en nuestro caso A, que significa IPv4); 
+    
+    clase (usualmente omitida ya que se utiliza solo `IN`); 
+
+    TTL (time to live, cantidad de tiempo que debe ser guardado el registro) y 
+
+    datos (datos reales del registro, osea, dirección: (IP, puerto) ).
 
 Al inicializarce una instancia se crea un diccionario de 'headers' que por cada solicitud que puede recibir tiene como valor la función que la maneja. También empieza un subproceso para actualizar los registros basándose en sus valores de TTL.
 
 ## Coordinación
-Decidimos implementar una arquitectura descentralizada de anillo sin líder (explicada anteriormente). Dónde cualquiera puede insertar nuevos nodos al anillo y puede ejercer de Manager temporal si detecta una desconexión. Esta decisión está encaminada a no crear puntos de fallas extras ya que la existencia de un líder añade seguridad y robustez al sistema si y solo si el líder no se cae, porque en esos casos surge un nuevo problema. 
+Decidimos implementar una arquitectura descentralizada de anillo sin líder (explicada anteriormente). Dónde cualquiera puede insertar nuevos nodos al anillo y puede ejercer de Manager temporal si detecta una desconexión. Esta arquitectura se enfoca en evitar la introducción de más fuentes de falla; minimizando los posibles problemas de estabilidad que surgen de modelos centralizados, como sería la inclusión de un líder.  
 
 ## Transacciones en la base de datos
-Los nodos de acceso a datos utilizan operaciones de transacción al acceder y modificar la base de datos. 
+Los nodos de acceso a datos utilizan operaciones de transacción al acceder y modificar la base de datos. Por ejemplo al insertar valores solo se hace commit luego de que todas las operaciones indicadas se hallan ejecutado exitosamente, si falla alguna inserción no se hace commit y se indica el error que ocurrió.
+```
+try:
+    connection = sqlite3.connect(data_base_file_path)
+    cursor = connection.cursor()
+    print("Connected to SQLite")
+
+    sqlite_query = "INSERT INTO " + table_name + " ( " + columns_names + " ) VALUES "
+
+    value = '(' + ('?,'*(len(row_tuples_tuple[0])-1)) + '?);'
+
+    insert = sqlite_query + value
+    cursor.executemany(insert, row_tuples_tuple)        
+    connection.commit()
+    print("Values inserted successfully into the table")
+    cursor.close()
+
+except sqlite3.Error as error:
+    print("Failed to insert data into sqlite table:",error)
+finally:
+    if connection:
+        connection.close()
+        print("The sqlite connection is closed") 
+```
+
 ## Replicación y consistencia
+Al unirse al anillo, un servidor de datos, se comunica con alguno de los servidores de datos existentes para replicar los datos. Para mantener la consistencia y el sistema funcional ntentamos garantizar que existan al menos 2 servidores de datos en todo momento, con los datos replicados. De esta forma si alguno se desconecta, aún persisten los datos importantes y a través del anillo se cambian los roles de ser necesario para mantener 2 nodos de datos. 
+
+## Grupos 
+La principal aproximación para tolerar la falla de procesos es organizar varios procesos idénticos en grupos. Nuestra implementación es de grupos planos, no jerárquicos. Ante una falla, aunque el grupo tenga un integrante menos continua su funcionamiento, a menos que quede vacío, por supuesto. Tanto los nodos de datos como los routers tienen un grupo. De forma que cuando se quiere solicitar algo a uno de estos roles se pide al DNS la dirección del grupo, y este retorna una lista con todos los integrantes activos en el momento, en el grupo. De esta forma se pueden hacer peticiones a uno o más miembros del grupo, de forma iterativa o simultánea.
+
 ## Balance de cargas
+Implementamos técnicas de balance de cargas en varios momentos. En la instancia más abstracta, tenemos los grupos de roles para que las conexiones no recaigan sobre solo un nodo, ya que cualquier integrante del grupo puede responder igual a las peticiones. Además, al elegir a cuál servidor solicitar la petición siempre se selecciona estocásticamente con distribución uniforme, intentando que cada integrante del grupo tenga la misma carga.
+
 ## Tolerancia a fallas
-La tolerancia a fallas está fuertemente relacionada con los
-Sistemas Dependientes. La dependencia cubre un conjunto de
-requerimientos donde se incluyen los siguientes:
-Disponibilidad
-Confiabilidad
-Seguridad
-Mantenibilidad
+La tolerancia a fallas está fuertemente relacionada con los Sistemas Dependientes. La dependencia cubre un conjunto de requerimientos donde se incluyen los siguientes:
+- Disponibilidad : un sistema altamente disponible es aquel se encuentra trabajando en cualquier instante de tiempo. Nosotros garantizamos disponibilidad siempre que exista al menos un nodo en cada rol.
 
-un
-sistema altamente disponible es aquel se encuentra trabajando
-en cualquier instante de tiempo.
+- Confiabilidad : la confiabilidad está definida en términos de intervalos de tiempo en vez de instantes de tiempo. Un sistema altamente confiable es aquel que puede funcionar sin interrupción por largos períodos de tiempo. Dado que depende de la estabilidad de la conexión solo podemos garantizar que tenemos mecanismos de reintentar las peticiones varias veces antes de darle a conocer al usuario que hubo fallo. Introduciento cierta medida de transparencia y dando oportunidad a que el sistema falle y pueda reconectarse y completar la tarea.
 
-la confiabilidad está definida en términos de
-intervalos de tiempo en ves de instantes de tiempo. Un sistema
-altamente confiable es aquel que puede funcionar sin
-interrupción por largos períodos de tiempo.
+- Seguridad : se refiere a la posibilidad de un sistema de que a pesar de fallar temporalmente en su correcto funcionamiento no genera situaciones catastróficas. Dado que pensamos en muchísimas de las formas en que puede fallar el sistema y en todas o casi todas tenemos mecanismos de detección de fallas; los errores no suelen ser inesperados y existen medidas para frenar las consecuencias y que no sean catástroficas como borrar arbitrariamente datos o que se cierren solos los servidores.
 
-Seguridad
-Esta propiedad se refiere a la posibilidad de un sistema de que
-a pesar de fallar temporalmente en su correcto funcionamiento
-no genera situaciones catastróficas.
+- Mantenibilidad : se refiere a la facilidad con que un sistema con fallas puede ser reparado. En este apartado tenemos varias medidas. Por ejemplo al enviar datos, solo se considera correcto el envio si se envió correctamente cada fragmento de información y además se recibió el ACK. Si algo falla se espera un tiempo y se vuelve a intentar el envio, creando la oportunidad para que el sistema se repare y la operación ocurra correctamente y de forma transparente. Además, al tener una noción de grupos, si la operación falla con uno de los integrantes, se puede intentar con otro que esté funcional. Esta medida de respaldo funciona gracias a que el DNS no brinda una sola dirección, sino varias, permitiendo intentar por todas ellas si alguna no funciona. Entre las técnicas empleadas está la redundancia de tiempo y redundancia física.
 
-Mantenibilidad
-Se refiere a la facilidad con que un sistema con fallas puede
-ser reparado. Un sistema altamente mantenible puede ser un
-sistema con un alto grado de disponibilidad sobre todo si las
-fallas pueden ser detectadas y reparadas automáticamente.
 
-Tipos de fallas
-Fallas Ocasionales: Ocurren una vez y luego desaparecen
-Fallas Intermitentes: Ocurren, luego desaparecen por sí
-solas, después reaparecen y así sucesivamente.
-Fallas Permannentes: es una que continúa existiendo
-hasta que el componente defectuoso es remplazado.
+En otro tema de tolerancia a fallas está la comunicación punto a punto:
 
-Enmascaramiento por redundancia
-Si un sistema es Tolerante a Fallas debe ocultar la ocurrencia
-de fallas en un proceso al resto de los procesos del sistema. La
-técnica clave para enmascarar las fallas es utilizar la
-redundancia. Esta puede puede ser de tres formas:
-Redundancia de información
-Redundancia de tiempo
-Redundancia física
-
-Redundancia de información
-Se añade información extra para cuando pueda ocurrir un error
-en la recepción de la información esta se pueda recuperar.
-Redundancia de tiempo
-Una acción es realizada y luego, si es necesario, se puede
-volver a realizar. Esta redundancia es bastante útil frente a
-fallas ocasionales o intermitentes.
-Redundancia física
-Equipamiento o procesos extras son adicionados de forma que
-el sistema, como sistema, pueda tolerar la pérdida o el
-malfuncionamiento de algunos componentes. Esta redundancia
-se puede realizar a nivel de hardware o de software.
-
-Grupos
-La principal aproximación para tolerar la falla de procesos es
-organizar varios procesos idénticos en grupos. Cuando un
-mensaje es enviado al grupo todos los miembros del mismo lo
-reciben. De esta manera esta forma si un proceso falla otro
-puede ocupar su lugar.
-Características
-Los grupos deben ser dinámicos.
-Se debe poder crear nuevos grupos y destruir los que no
-se necesiten.
-Un proceso se puede unir o abandonar cualquier grupo.
-Un proceos puede formar parte de varios grupos.
-
-Grupos Planos
-Los grupos planos son simétricos y no tienen puntos de falla.
-Si un proceso falla el grupo tiene un integrante menos pero
-puede continuar su funcionamiento a no ser que quede sin
-miembros. Tiene como desventaja la toma de decisiones.
-
-Comunicación Punto a Punto
-La comunicación punto a punto que se establece en los
-sistemas distribuidos se suele realizar a partir de conexiones
-TCP. Este protocolo posee sus propios mecanismos de
-tolerancia a fallas y son transparentes a los clientes que lo
-utilizan. Sin embargo en muchos casos el conexión TCP se
-puede cerrar abruptamente producto de una falla externa a la
-conexión. La única posibilidad de enmascarar esta falla es que
-el sistema automáticamente detecte la falla de la conexión y
-automáticamente cree una nueva conexión.
-
-Fallas en RPC 
-1 El cliente no puede localizar el servidor.
-2 El request del cliente al servidor se pierde.
-3 El servidor falla después de recibir el request.
-4 El mensaje de respuesta del cliente al servidor se pierde.
-5 El cliente falla después de enviar el request.
+La comunicación en el sistema es a través de socket TCP, los cuáles poseen sus propios mecanismos de tolerancia a fallas. Sin embargo en casos donde la conexión TCP se cierra abruptamente producto de una falla externa a la conexión, nuestro sistema detecta la falla y dependiendo del contexto; crea una nueva conexión, espera un tiempo antes, decide manejarlo como un error y envía la información de error, etc.
 
 ## Seguridad
+Aunque no indagamos mucho en el apartado de seguridad, ya que no implementamos un sistema de autetificación explícito, no lo dejamos totalmente de lado. Toda la información que se envía está codificada, de esta forma si una entidad ajena recibe un paquete, no debe ser capaz de entenderlo. Por otro lado, solo se puede unir al sistema y ser reconocido por él, entidades que hablen el "idioma" que hablan nuestros nodos. Ya que solo así se puede saber la naturaleza de la petición, e incluso saber identificar el final de un mensaje y el inicio de otro.        
