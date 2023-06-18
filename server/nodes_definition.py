@@ -37,11 +37,8 @@ headers = { 'SSList':0,     # Send Songs List
             'JRingAt':0,    # Join Ring At
             'FallenNode':0, # Fallen Node
             'Unbalance':0,  # Unbalanced Roles
-
-
-            # 'ReqELECTION':0,# Request ELECTION
-            # 'RecELECTION':0,# Received ELECTION
-            # 'ELECTED':0,    # ELECTED (Election result)
+            'ReportNext':0, # Report to your next in ring
+            'FixRing':0,    # Fix Ring
             }
 
 
@@ -53,6 +50,7 @@ class Role_node():
         return self.__class__.__name__
 
 class Data_node(Role_node):
+    """Data base manager"""
     def __init__(self,server_id=0, path='data_nodes', database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None):
         self.id = server_id
         
@@ -143,8 +141,6 @@ class Data_node(Role_node):
         pass
 
     def request_songs_list(self,request_data,connection,address):
-        if not self.have_data:
-            return []
         self.songs_tags_list = dbc.get_aviable_songs(self.db_path)
         encoded = pickle.dumps(tuple(['SSList',self.songs_tags_list,core.TAIL]))
         state, _ = core.send_bytes_to(encoded,connection,False)
@@ -159,8 +155,6 @@ class Data_node(Role_node):
         return False
         
     def request_song(self,song_id:int,connection,address):
-        if not self.have_data:
-            return None
         query = "SELECT * from songs where id_S = "+str(song_id)
         # row = [id_S, title, artists, genre, duration_ms, chunk_slice]
         row = dbc.read_data(self.db_path, query)
@@ -189,8 +183,6 @@ class Data_node(Role_node):
         return True
     
     def request_chunk(self,request_data,connection,address):
-        if not self.have_data:
-            return False
         id_Song = int(request_data[0])
         ms = int(request_data[1])
         chunk = dbc.get_a_chunk(ms,id_Song,self.db_path) 
@@ -208,6 +200,7 @@ class Data_node(Role_node):
             return False
 
 class Router_node(Role_node):
+    """ Client manager node"""
     class _providers:
         def __init__(self,address,type):
             self.address = address
@@ -223,9 +216,9 @@ class Router_node(Role_node):
                         'Rchunk':self.send_providers_list,      # Request chunk
                         }
 
-        self.providers_by_song = dict()     # update by time or by event
+        self.providers_by_song = dict()    
         self.existing_providers = list()
-        self.songs_tags_list = list()       # update by time or by event
+        self.songs_tags_list = list()       
 
     def __get_songs_tags_list(self):
         # connect to a data node and ask for it
@@ -233,8 +226,6 @@ class Router_node(Role_node):
         data_servers = []
         if addrs != None:
             for addr in addrs:
-                # ip = addr.split(':')[0]
-                # port = int(addr[1].split(':')[1])
                 data_servers.append(addr)
 
         data_servers = set(data_servers)
@@ -252,17 +243,16 @@ class Router_node(Role_node):
                 break
         encoded = pickle.dumps(core.ACK_OK_tuple)
         state, _ = core.send_bytes_to(encoded,sock,False)
-        # if state == 'OK': return True
-        # return False
+
         if 'SSList' in decoded:
             self.songs_tags_list = decoded[1]
         else:
+            print(decoded)
             self.songs_tags_list = None
 
         return self.songs_tags_list
     
     def __get_best_providers(self,song_id):
-        # TODO self.__update_alive_providers()
         old_prov = self.providers_by_song.get(song_id)
         self.providers_by_song[song_id] = []
         if not old_prov:
@@ -310,9 +300,6 @@ class Router_node(Role_node):
         for prov in sampl:
             to_send.append(prov.address)
         return to_send
-    
-    def __update_alive_providers(self):
-        pass
 
     def send_songs_tags_list(self,request_data,connection,address):
         data = self.__get_songs_tags_list()
@@ -426,7 +413,7 @@ class DNS_node(Role_node):
             # problems in the records for self.domain
             error_msg = "DNS error. Problems with record of "+domain+"."
             raise errors.Error(error_msg)
-        datas = self.__alive_from(datas)
+        # datas = self.__alive_from(datas)
         response = tuple(['SNSolve', datas, core.TAIL])
         encoded = pickle.dumps(response)
         state, _ = core.send_bytes_to(encoded,connection,False)
@@ -439,7 +426,7 @@ class DNS_node(Role_node):
     
     def update_using_ttl(self):
         while True:
-            time.sleep(15)
+            time.sleep(30)
             try:
                 data = self._get_records()
             except:

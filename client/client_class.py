@@ -228,15 +228,18 @@ if __name__ == "__main__":
     argList = sys.argv
     if len(argList) > 1:
         core.DNS_addr = (argList[1],core.DNS_PORT)
-    # core.DNS_addr = ('172.20.0.2',core.DNS_PORT)
 
     cl = Client()
+    print("---------- Welcome: ----------\nTo see the aviable songs type: 'song list'\nTo request a song type: 'song <id>'",
+            "\n where <id> is the number of the desired song. The songs will be saved in /cache.\n\n")
     while True:
         order:str = input()
         if order == 'song list':
+            # Request Song List
             cl.refresh_song_list()
             print(cl.song_list)
         elif 'song' == order.split()[0]:
+            # Request song id-th
             id = int(order.split()[1])
             row = None
             for ind in cl.song_list:
@@ -250,4 +253,6 @@ if __name__ == "__main__":
 
             cl.request_song(id,number_of_chunks)
         else: 
-            print('wrong request')
+            print('Wrong request!!')
+            print("\nTo see the aviable songs type: 'song list'\nTo request a song type: 'song <id>'",
+            "\n where <id> is the number of the desired song. The songs will be saved in /cache.\n\n")

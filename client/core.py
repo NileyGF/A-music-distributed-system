@@ -5,12 +5,13 @@ import pickle
 import errors
 
 # Addresses
-DNS_addr = ('0.0.0.0', 5353)
-# LEADER_PORT = 8989
+DNS_addr = ('172.20.0.2', 5353)
+
 DATA_PORT = 7777
 ROUTER_PORT = 8888
 DNS_PORT = 5353
 NONE_PORT = 6789
+RING_PORT = 8000
 # Messages
 TAIL = '!END!'
 ACK_OK_tuple = tuple(["ACK","OK",TAIL])
@@ -19,7 +20,7 @@ ECHO_REPLAY = tuple(['echoreplay',None,TAIL])
 FAILED_REQ = tuple(['FailedReq',None,TAIL])
 
 
-def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: bool = True, attempts: int = 3, time_to_retry_ms: int = 1000, bytes_flow: int = 1500, timeout=10):
+def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: bool = True, attempts: int = 3, time_to_retry_ms: int = 1000, bytes_flow: int = 1500):
     # number of sending attempts while a disconnection error pops up
     if attempts < 0:
         attempts = 3
@@ -40,6 +41,7 @@ def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: 
                 start += sent
                 print("\nSent %d/%d bytes" % (total_sent, len(payload)), connection)
             ok = True
+            print("Sent : ",pickle.loads(payload))
             break
         except socket.error as error:
             i += 1
@@ -89,7 +91,6 @@ def receive_data_from(connection: socket.socket, bytes_flow: int = 1024, waiting
             try:
                 decode = pickle.loads(data)
                 if TAIL in decode:
-                    print('tail reached')
                     break
                 else:
                     print(decode)
@@ -99,6 +100,11 @@ def receive_data_from(connection: socket.socket, bytes_flow: int = 1024, waiting
             i += 1
 
     print('Failed iter: ', i, '. Received data = ', len(data))
+    if len(data) > 0:
+        try: print(pickle.loads(data))
+        except: pass
+    else:
+        print('\n\t Unresponsive ',connection)
     return data
 
 def get_addr_from_dns(domain:str):
@@ -117,9 +123,6 @@ def get_addr_from_dns(domain:str):
     sock.close()
     
     if result[0] == 'SNSolve':
-    #     ip = result[1].split(':')[0]
-    #     port = int(result[1].split(':')[1])
-    # return (ip,port)
         return result[1]
 
 def send_addr_to_dns(domain:str, address:tuple, ttl:int=60):
@@ -143,29 +146,33 @@ def send_addr_to_dns(domain:str, address:tuple, ttl:int=60):
         pass
     return False
     
-def send_ping_to(address:str,data=None):
-    """Send a ping message to address <ip:port>"""
+def send_ping_to(address:tuple,data=None):
+    """Send a ping message to address (ip, port)"""
     try: 
         messag = tuple([PING_tuple[0],data,PING_tuple[2]])
         pickled_data = pickle.dumps(messag)
-        ip = address.split(':')[0]
-        port = int(address[1].split(':')[1])
+        # ip = address.split(':')[0]
+        # port = int(address[1].split(':')[1])
         sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        sock.connect((ip,port))
+        sock.connect(address)
     
         send_bytes_to(pickled_data,sock,False)
         result = receive_data_from(sock,waiting_time_ms=3000,iter_n=3)
         decoded = pickle.loads(result)
-    
-        if 'echoreply' in decoded:
+        if 'echoreplay' in decoded:
+            sock.close()
             return True
-    except:
-        pass
+    except Exception as err :
+        print('ping error: ',err)
+    sock.close()
     return False
 
 def send_echo_replay(ping_data,connection:socket.socket,address):
     """answer a ping message"""
     pickled_data = pickle.dumps(ECHO_REPLAY)
     state, _ = send_bytes_to(pickled_data,connection,False)
-    if state == 'OK': return True
+    if state == 'OK': 
+        return True
     return False
+
+

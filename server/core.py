@@ -41,6 +41,7 @@ def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: 
                 start += sent
                 print("\nSent %d/%d bytes" % (total_sent, len(payload)), connection)
             ok = True
+            print("Sent : ",pickle.loads(payload))
             break
         except socket.error as error:
             i += 1
@@ -90,7 +91,6 @@ def receive_data_from(connection: socket.socket, bytes_flow: int = 1024, waiting
             try:
                 decode = pickle.loads(data)
                 if TAIL in decode:
-                    print('tail reached')
                     break
                 else:
                     print(decode)
@@ -100,6 +100,11 @@ def receive_data_from(connection: socket.socket, bytes_flow: int = 1024, waiting
             i += 1
 
     print('Failed iter: ', i, '. Received data = ', len(data))
+    if len(data) > 0:
+        try: print(pickle.loads(data))
+        except: pass
+    else:
+        print('\n\t Unresponsive ',connection)
     return data
 
 def get_addr_from_dns(domain:str):
