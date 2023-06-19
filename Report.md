@@ -14,6 +14,73 @@ Presentamos el diseño de un sistema distribuido compuesto por cuatro tipos dist
 Nuestro sistema garantiza su funcionamiento si hay al menos un nodo de cada role. Sin embargo, si en esas condiciones se conectan muchos clientes es posible que el rendimiento no sea el mejor. 
 
 ## Ejecución
+En el archivo Instructions.txt aparecen los comandos a utilizar para ejecutar el sistema.
+
+Solo es necesario tener instalado docker, ya que la imagen de docker tiene todas las dependencias.
+
+### Servidores
+
+En la carpeta `server` se ejecuta:
+
+    docker build -t server . 
+
+o 
+
+    docker load -i <path/server.tar>
+
+Eso crea la imagen de los servidores. Despúes es necesario crear una red de docker, donde interactuarán los contenedores de los servidores.
+
+    docker network create --driver bridge --subnet=172.20.0.0/16 dispotify_network
+
+Luego, por cada servidor que se desee activar hay que seguir los siguientes pasos:
+
+1. Crear un contenedor. Seguido el parámetro --ip hay que introducir una dirección IP válida que esté en el rango de la subred especificada al crear la red de docker, que tiene ser distinta para cada contenedor/servidor creado. Además, después de --name debe introducirse el nombre con que se identificará el contenedor
+
+        docker run --net dispotify_network --ip <valid ip in 172.20.0.0/16, like 172.20.0.2> -it -d --name <container_name> server bash
+
+2. Luego, se ejecuta el contenedor en un terminal bash con el siguiente comando: 
+
+        docker exec -it <container_name> /bin/bash
+
+En este nuevo terminal, se puede comprobar que los requerimientos han sido instalados ejecutando, por ejemplo `python3 --version`. 
+
+3. Para ejecutar un servidor específico es necesario aclarar algunos parámetros como el tipo de servidor y la dirección del seridor. 
+
+    Los tipos de servidores son:
+        0 - Servidor sin Role predefinido
+        1 - Servidor de datos
+        2 - Servidor DNS
+        3 - Servidor router
+    
+    El ip del servidor que hay que poner es el del contenedor donde se está ejecutando. Además si la dirección del DNS no es la default (172.20.0.2), también hay que proveerla.
+
+        python3 server_class.py <server_type> <container_ip> <DNS_ip, optional>
+
+    En `<server_type>` corresponde un número entre 0 y 3, según lo explicado anteriormente. En `<container_ip>` va la dirección asignada al contenedor. En `<DNS_ip, optional>` va la dirección del contenedor donde se ejecute el DNS y solo es necesaria si es distinta a `'172.20.0.2'`.
+
+### Clientes
+
+En la carpeta `client` se ejecuta:
+
+    docker build -t client . 
+
+o 
+
+    docker load -i <path/client.tar>
+
+Eso crea la imagen de los clientes.
+
+1. Por cada cliente que se desee unir al sistema  se crea un contenedor, con nombres distintos, utilizando el siguiente comando:
+
+        docker run --net dispotify_network -it -d --name <client_x> client bash
+
+2. Luego, se ejecuta el contenedor en un terminal bash con el siguiente comando: 
+
+        docker exec -it <client_x> /bin/bash
+
+3. Por último se ejecuta el cliente con :
+
+        python3 client_class.py <DNS_ip, optional>
 
 ## Roles del sistema:
 - **DNS**: implementamos este role para resolver dinámicamente la entrada al sistema tanto desde los clientes como desde otros servidores. Tiene tres funciones principales: agregar registros, resolución de nombre y mantenimiento de consistencia.
