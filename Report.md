@@ -93,6 +93,10 @@ La resolución de nombre permite obtener todas las direcciones IP de los nodos a
 Finalmente, la función de mantenimiento de consistencia conlleva a que cuando se inicia un nodo DNS se crea un subproceso que revisa periódicamente todos los registros almacenados para determinar si han expirado. Si es así, se contacta con el servidor correspondiente para comprobar su estado y, si responde correctamente, se renueva el TTL. Además, asegura que la dirección devuelta sea válida en el momento de la consulta.
 
 - **Client**: este rol se encarga de manejar las solicitudes del usuario y comunicarse con el sistema de servidores distribuidos según sea necesario. Sus dos tareas principales incluyen actualizar la lista de metadatos de la música y solicitar canciones específicas al sistema para almacenarlas en cache y reproducirlas para el usuario.
+	> [!info] App en desarrollo
+	>  ------------------------------
+	>  
+	>  ![|434x485](App_view.png)
 
 - **Router**: su papel principal es manejar las solicitudes de los clientes, proporcionándoles información actualizada sobre listas de canciones y, dada una canción que el cliente desee, localizar los proveedores activos que ofrezcan la canción solicitada y enviar sus direcciones al cliente. Todo ello mientras intenta mantener balance en el sistema con estrategias estocásticas.
 
