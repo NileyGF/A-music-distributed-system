@@ -12,9 +12,9 @@ RUN apt-get update && \
     apt-get install -y python3-tk
 RUN pip install customtkinter
 RUN pip install pygame
-RUN apt-get install libglib2.0-dev
+# RUN apt-get install libglib2.0-dev
 
-ENV DISPLAY=127.0.0.1:0.0
+# ENV DISPLAY=127.0.0.1:0.0
 
 COPY . .
 
