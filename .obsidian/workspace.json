@@ -14,7 +14,7 @@
               "type": "markdown",
               "state": {
                 "file": "Report.md",
-                "mode": "preview",
+                "mode": "source",
                 "source": false
               }
             }
@@ -149,6 +149,7 @@
   },
   "active": "b293f45ae17fd64a",
   "lastOpenFiles": [
+    "System_view.png",
     "App_view.png",
     "Report.md",
     "README.md",

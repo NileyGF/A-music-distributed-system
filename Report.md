@@ -112,6 +112,12 @@ En este anillo, cada integrante tiene una referencia a los 2 nodos que hay hacia
 
 Además todos los nodos, al unirse al anillo crean un subproceso de supervisión para monitorear la consistencia del anillo y enviar informes periódicos a su sucesor. Si un servidor se desconecta y es detectado por este mecanismo, se envía un mensaje de alerta por todo el anillo y cada nodo incluye su información en el mensaje al reenviarlo. Cuando el mensaje vuelve al que detectó la falla (que se convierte en un Manager temporal), se contabilizan la cantidad de nodos en el anillo de cada role. Si se alcanza el mínimo en alguno, se envía un mensaje de Desbalance por el anillo, explicando que role es necesario. Cuando el primer servidor con el role opuesto al necesario recibe el mensaje, cambia de role para mantener la disponibilidad y funcionalidad del sistema distribuidado.
 
+>[!note] Arquitectura del Sistemas
+>  ------------------------------
+>  
+>  ![](System_view.png)
+```
+
 ## **Características generales de los servidores:** 
 
 - **Concurrencia**: Los servidores tienen la capacidad de manejar varias solicitudes simultáneamente gracias a su diseño multiproceso. Al ser creados y establecer su role, designan un proceso que espera solicitudes y ante la llegada de una petición se crea otro proceso que se encarga de manejarla.
