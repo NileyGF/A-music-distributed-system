@@ -116,7 +116,6 @@ Además todos los nodos, al unirse al anillo crean un subproceso de supervisión
 >  ------------------------------
 >  
 >  ![](System_view.png)
-```
 
 ## **Características generales de los servidores:** 
 
@@ -148,7 +147,7 @@ Decidimos implementar una arquitectura descentralizada de anillo sin líder (exp
 
 ## **Transacciones en la base de datos**
 Los nodos de acceso a datos utilizan operaciones de transacción al acceder y modificar la base de datos. Por ejemplo al insertar valores solo se hace commit luego de que todas las operaciones indicadas se hallan ejecutado exitosamente, si falla alguna inserción no se hace commit y se indica el error que ocurrió.
-```
+```z
 try:
     connection = sqlite3.connect(data_base_file_path)
     cursor = connection.cursor()
@@ -170,7 +169,7 @@ finally:
     if connection:
         connection.close()
         print("The sqlite connection is closed") 
-```
+````
 
 ## **Replicación y consistencia**
 Al unirse al anillo, un servidor de datos, se comunica con alguno de los servidores de datos existentes para replicar los datos. Para mantener la consistencia y el sistema funcional ntentamos garantizar que existan al menos 2 servidores de datos en todo momento, con los datos replicados. De esta forma si alguno se desconecta, aún persisten los datos importantes y a través del anillo se cambian los roles de ser necesario para mantener 2 nodos de datos. 
