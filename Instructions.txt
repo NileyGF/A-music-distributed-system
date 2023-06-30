@@ -8,9 +8,21 @@ docker network create --driver bridge --subnet=172.20.0.0/16 dispotify_network
 
 docker run --net dispotify_network --ip <valid ip in 172.20.0.0/16, like 172.20.0.2> -it -d --name <container_name> server bash
 
+docker run --net dispotify_network --ip 172.20.0.2 -it -d -v /Users/josue/Documents/Ciencias_de_la_Computación/4to/Distributed_Spotify/SD_Spotify_Niley_Josue/A-music-distributed-system/server:/Users/josue/Documents/Ciencias_de_la_Computación/4to/Distributed_Spotify/SD_Spotify_Niley_Josue/A-music-distributed-system/server --name dns server bash 
+docker run --net dispotify_network --ip 172.20.0.3 -it -d -v /Users/josue/Documents/Ciencias_de_la_Computación/4to/Distributed_Spotify/SD_Spotify_Niley_Josue/A-music-distributed-system/server:/Users/josue/Documents/Ciencias_de_la_Computación/4to/Distributed_Spotify/SD_Spotify_Niley_Josue/A-music-distributed-system/server --name router server bash 
+docker run --net dispotify_network --ip 172.20.0.4 -it -d -v /Users/josue/Documents/Ciencias_de_la_Computación/4to/Distributed_Spotify/SD_Spotify_Niley_Josue/A-music-distributed-system/server:/Users/josue/Documents/Ciencias_de_la_Computación/4to/Distributed_Spotify/SD_Spotify_Niley_Josue/A-music-distributed-system/server --name db server bash 
+
 docker exec -it <container_name> /bin/bash
 
+docker exec -it dns /bin/bash
+docker exec -it router /bin/bash
+docker exec -it db /bin/bash
+
     python3 server_class.py <server_type> <container_ip> <DNS_ip, optional>
+    
+    python3 server_class.py 2 172.20.0.2 
+    python3 server_class.py 3 172.20.0.3 
+    python3 server_class.py 1 172.20.0.4
 
 
 
@@ -20,8 +32,8 @@ docker build -t client .
 or
 docker load -i <path/client.tar>
 
-docker run --net dispotify_network -it -d --name <client_x> client bash
+docker run --net dispotify_network -p 8080:5000 -it -d -v /Users/josue/Documents/Ciencias_de_la_Computación/4to/Distributed_Spotify/SD_Spotify_Niley_Josue/A-music-distributed-system/client:/Users/josue/Documents/Ciencias_de_la_Computación/4to/Distributed_Spotify/SD_Spotify_Niley_Josue/A-music-distributed-system/client --name client_1 client bash
 
-docker exec -it <client_x> /bin/bash
+docker exec -it client_1 /bin/bash
 
-    python3 client_class.py <DNS_ip, optional>
+    python3 app2.py

@@ -6,7 +6,7 @@ import pygame
 import math
 
 import client_class
-
+    
 class ScrolledListbox(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         tk.Frame.__init__(self, parent)

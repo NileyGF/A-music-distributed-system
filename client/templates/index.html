@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Player</title>
+    <style>
+  h1 {
+   text-align: center;
+  }
+  .container {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+  }
+  .button-container {
+   display: flex;
+   justify-content: center;
+   align-items: center;
+  }
+  .button {
+   margin: 0 10px;
+  }
+ </style>
+
+</head>
+<body>
+    <h1>Music Player</h1>
+    <h1>
+    <img src="{{ user_image }}">
+    <form action="/on_load_click" method="post">
+        <button style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Cargar</button> 
+    </form>
+    </h1>
+    
+   <style>
+  .select-box {
+    width: 100%;
+    text-align: center;
+  }
+
+  .select-box select {
+    width: 100%;
+    font-size: 24px;
+  }
+</style>
+
+<div class="select-box">
+  <select size="{{ songs|length }}">
+    {% for opcion in songs %}
+      <option value="{{ opcion }}">{{ opcion }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<script>
+  const selectElement = document.getElementById('songSelect');
+  let selectedOption = '';
+
+  selectElement.addEventListener('change', (event) => {
+    selectedOption = event.target.value;
+  });
+</script>  
+
+
+<h1>
+    <br>
+    <input type="text" placeholder="Escriba el nombre de la canción que desea" style="border-color: black; color: white; background-color: black; width: 100%; height: 40px;">
+    <br>
+    <div style="background-color: white;">
+      <form action="/on_download_click" method="post">
+        <input type="hidden" id="selectedOption" name="selectedOption" value="">
+        <button style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Descargar</button>
+      </form>
+      <form action="/on_play_click" method="post">
+        <input type="hidden" id="selectedOption" name="selectedOption" value="">
+        <button style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Reproducir</button>
+      </form>
+      <form action="/on_stop_click" method="post">
+        <button style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Parar</button>
+      </form>
+    </div>
+</h1>
+</body>
+</html>
