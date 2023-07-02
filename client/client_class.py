@@ -231,7 +231,7 @@ if __name__ == "__main__":
 
     cl = Client()
     print("---------- Welcome: ----------\nTo see the aviable songs type: 'song list'\nTo request a song type: 'song <id>'",
-            "\n where <id> is the number of the desired song. The songs will be saved in /cache.\n\n")
+            "\n where <id> is the number of the desired song. The songs will be saved in /cache.")
     while True:
         order:str = input()
         if order == 'song list':

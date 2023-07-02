@@ -18,7 +18,7 @@ class Server:
     # Will be re-assigned by constructor.
     serverNumber = 1
 
-    def __init__(self, serverNumber, serverIpAddr, role:nd.Role_node=None, args:tuple=()):
+    def __init__(self, serverNumber, serverIpAddr, role:nd.Role_node, args:tuple=()):
 
         self.serverHeaders = {'ReqJRing':self.__requested_join,     # Request Join Ring
                             #   'JRingAt':self.__new_neighbors,     # Join Ring At
@@ -44,10 +44,8 @@ class Server:
         self.serverIpAddr = serverIpAddr
         self.role_instance = manager.list()
         self.role_instance.append(None)
-        if role != None:
-            self.role_instance[0] = role(serverNumber,*args)
-        else:
-            self.__get_role()
+        self.init_role = [role, args]
+        
 
 
     def run_server(self):
@@ -58,12 +56,20 @@ class Server:
         self.accept_process = multiprocessing.Process(target=self.init_socket)
         self.accept_process.start()
         # self.accept_process.join()
+        # assign role
+        if self.init_role[0] != None:
+            # print(self.init_role[0],self.init_role[1])
+            # print(self.role_instance)
+            self.role_instance[0] = self.init_role[0](*self.init_role[1])
+        else:
+            self.__get_role()
+
         return self.accept_process
 
     def init_socket(self):
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        address = (self.serverIpAddr, nd.ports_by_role[str(self.role_instance[0])])
+        address = (self.serverIpAddr, nd.ports_by_role[self.init_role[0].str_rep])
         self.serverSocket.bind(address)
         print(address)
         self.serverSocket.listen(5)
@@ -72,7 +78,7 @@ class Server:
             # if not DNS: join ring and subscribe to DNS
             while True:
                 try:                    
-                    result = core.send_addr_to_dns(nd.domains_by_role[str(self.role_instance[0])],address)
+                    result = core.send_addr_to_dns(nd.domains_by_role[self.init_role[0].str_rep],address)
                     if result: 
                         break
                 except Exception as err:
@@ -101,33 +107,36 @@ class Server:
     #     self.role_instance = role(self.serverNumber,*args)
     #     return self.run_server()
 
-    def attend_connection(self,connection:socket,address:str):
-        received = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=5)
-        try:
-            decoded = pickle.loads(received)
-            # check if it is a server action
-            if self.serverHeaders.get(decoded[0]):
-                print('Ring Handler')
-                handler = self.serverHeaders.get(decoded[0])
-                response = handler(decoded[1],connection,address)
-            # else, if it isn't a role action, send FAILED REQUEST
-            elif not self.role_instance[0].headers.get(decoded[0]):
-                response = core.FAILED_REQ
-                encoded = pickle.dumps(response)
-                core.send_bytes_to(encoded,connection,False)
-            else:
-                print('Role Handler')
-                handler = self.role_instance[0].headers.get(decoded[0])
-                response = handler(decoded[1],connection,address)
+    def attend_connection(self,connection:socket,address):
 
-        except Exception as err:
-            print(err, "FAILED REQ") 
+        received = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=5,verbose=False)
+        while self.role_instance[0] == None:
+            continue
+        # try:
+        decoded = pickle.loads(received)
+        # check if it is a server action
+        if self.serverHeaders.get(decoded[0]):
+            print('Ring Handler')
+            handler = self.serverHeaders.get(decoded[0])
+            response = handler(decoded[1],connection,address)
+        # else, if it isn't a role action, send FAILED REQUEST
+        elif not self.role_instance[0].headers.get(decoded[0]):
             response = core.FAILED_REQ
             encoded = pickle.dumps(response)
             core.send_bytes_to(encoded,connection,False)
+        else:
+            print('Role Handler')
+            handler = self.role_instance[0].headers.get(decoded[0])
+            response = handler(decoded[1],connection,address)
+
+        # except Exception as err:
+        #     print(err, "FAILED REQ") 
+        #     response = core.FAILED_REQ
+        #     encoded = pickle.dumps(response)
+        #     core.send_bytes_to(encoded,connection,False)
                  
-        finally:
-            connection.close()
+        # finally:
+        #     connection.close()
 
     def __get_role(self):
         role = 0
@@ -606,14 +615,23 @@ def main():
     if argSize == 4:
         core.DNS_addr = (argList[3],core.DNS_PORT)
     if argSize < 2:
-        argList = [None,'0','172.20.0.200']
+        argList = [None,'0','0.0.0.0']
+
+    # if a == 1:
+    #     argList = [None,'1','localhost']
+    #     core.DNS_addr = ('0.0.0.0',core.DNS_PORT)
+    # if a == 2:
+    #     argList = [None,'2','0.0.0.0']
+    # if a == 3:
+    #     argList = [None,'3','localhost']
+    #     core.DNS_addr = ('0.0.0.0',core.DNS_PORT)
 
     # Creating instances of Servers 
     if argList[1] == '0':
         Server0 = Server(0, argList[2])
         p0 = Server0.run_server()
     elif argList[1] == '1':
-        Server1 = Server(1, argList[2],nd.Data_node,('data_nodes', None, True, 'songs'))
+        Server1 = Server(1, argList[2],nd.Data_node,(argList[2],'data_nodes', 'songs'))
         p1 = Server1.run_server()
     elif argList[1] == '2':
         Server2 = Server(2, argList[2],nd.DNS_node,())
