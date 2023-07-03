@@ -101,9 +101,9 @@ class Data_node(Role_node):
                     self.chord.join((dbs[0][0],core.CHORD_PORT))
                 else:
                     print("CREATING CHORD RING")
-                    self.chord.predecessor[0] = (self.chord.id, (self.chord.ip,self.chord.port))
-                    self.chord.successor[0] = (self.chord.id, (self.chord.ip,self.chord.port))
-                    self.chord.finger_table[0][1] = (self.chord.id, (self.chord.ip,self.chord.port))
+                    # self.chord.predecessor[0] = (self.chord.id, (self.chord.ip,self.chord.port))
+                    # self.chord.successor[0] = (self.chord.id, (self.chord.ip,self.chord.port))
+                    # self.chord.finger_table[0][1] = (self.chord.id, (self.chord.ip,self.chord.port))
 
         except:
             raise Exception("Can't join hash table")
@@ -249,7 +249,7 @@ class Data_node(Role_node):
         number_of_chunks = math.ceil(number_of_chunks)
 
         chunks = dbc.get_n_chunks(0,song_id,number_of_chunks,self.db_path)
-        print('chunks gotten')
+        print('chunks gotten: ', len(chunks))
         for ch in chunks:
             try:
                 encoded = pickle.dumps(tuple(['Schunk',ch,core.TAIL]))
@@ -578,7 +578,7 @@ class DNS_node(Role_node):
             error_msg = "DNS error. Problems with record of "+domain+"."
             raise errors.Error(error_msg)
         # datas = self.__alive_from(datas)
-        datas = set(datas)
+        datas = list(set(datas))
         response = tuple(['SNSolve', datas, core.TAIL])
         encoded = pickle.dumps(response)
         state, _ = core.send_bytes_to(encoded,connection,False)

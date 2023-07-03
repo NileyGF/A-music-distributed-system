@@ -57,9 +57,7 @@ class Node:
         self.port = int(port)
         self.id = self.hash() # 0 <= self.id < 2^RING_SIZE
         manager = multiprocessing.Manager()
-        self.finger_table = manager.list()
-        for idx in self.init_finger_table():
-            self.finger_table.append(idx)
+        
         """ Since the successor (or predecessor) of a node may disappear from the network, 
             record an arc of 2r+1 nodes in the middle of which it stands.
             A list of r nodes preceding it and r nodes following it. 
@@ -67,12 +65,16 @@ class Node:
             locate its successor or predecessor, even if the network in question suffers from a high failure rate.
             (r = 2)
         """
-        self.predecessor = manager.list()
-        self.predecessor.append(None)
-        self.predecessor.append(None)
-        self.successor = manager.list()
-        self.successor.append(None)
-        self.successor.append(None)
+        self.predecessor = manager.list([(self.id, (self.ip,self.port)),(self.id, (self.ip,self.port))])
+        self.successor = manager.list([(self.id, (self.ip,self.port)),(self.id, (self.ip,self.port))])
+
+        self.finger_table = manager.list()
+        for i in range(RING_SIZE):
+            entry = (self.id + pow(2, i)) % pow(2,RING_SIZE)
+            node = manager.list([None])
+            # node.values
+            self.finger_table.append( manager.list([entry, node]) )
+        self.print_finger()
 
         self.data_base = None
 
@@ -97,13 +99,13 @@ class Node:
                         # 'DSong' :self.remove_song,              # Delete Song
                         # 'SynData':self.sync_data_center,        # Synchronize Data Center
                         }
-        # multiprocessing.set_start_method('fork', force=True)
-        # p = multiprocessing.Process(target=self.stabilize)
-        # p.start()
-        # p = multiprocessing.Process(target=self.check_predecessor)
-        # p.start()
-        # p = multiprocessing.Process(target=self.fix_fingers)
-        # p.start()
+        multiprocessing.set_start_method('fork', force=True)
+        p = multiprocessing.Process(target=self.stabilize)
+        p.start()
+        p = multiprocessing.Process(target=self.check_predecessor)
+        p.start()
+        p = multiprocessing.Process(target=self.fix_fingers)
+        p.start()
         # t = threading.Thread(target = self.stabilize)
         # t.start()
         # t = threading.Thread(target = self.fix_fingers)
@@ -158,7 +160,7 @@ class Node:
         print(core.ANSI_colors['cyan'])
         if node_addr[0] == self.ip and node_addr[1] == self.port:
             self.successor[0] = (self.id, (self.ip, self.port))
-            self.finger_table[0][1] = self.successor[0]
+            self.finger_table[0][1] [0] = self.successor[0]
             # self.predecessor = [None, None]
             print(core.ANSI_colors['default'])
             return
@@ -176,7 +178,7 @@ class Node:
             sock.close()
             if 'JChordAt' in decoded:
                 self.successor[0] = decoded[1] # (id, address)
-                self.finger_table[0][1] = self.successor[0]
+                self.finger_table[0][1] [0] = self.successor[0]
                 print(self.successor)
                 # ask for the keys <= self.id, from successor
                 if self.successor[0][0] != self.id:
@@ -461,8 +463,8 @@ class Node:
         min_distance = pow(2,RING_SIZE) + 1
         for i in list(reversed(range(RING_SIZE))):
             
-            if self.finger_table[i][1] is not None and self.get_forward_distance(self.finger_table[i][0], search_id) < min_distance  :
-                closest_node = self.finger_table[i][1]
+            if self.finger_table[i][1][0] is not None and self.get_forward_distance(self.finger_table[i][0], search_id) < min_distance  :
+                closest_node = self.finger_table[i][1][0]
                 min_distance = self.get_forward_distance(self.finger_table[i][0],search_id)
                 # print("Min distance",min_distance)
 
@@ -521,7 +523,7 @@ class Node:
             if self.get_backward_distance(self.id,succ_pred[0]) > self.get_backward_distance(self.id,self.successor[0][0]):
                 # if ... changing my successor in stabilize
                 self.successor[0] = succ_pred # (id, (ip, port))
-                self.finger_table[0][1] = self.successor[0]
+                self.finger_table[0][1] [0] = self.successor[0]
 
             # notify successor
             request = tuple(['Notify',(self.id, (self.ip, self.port)),core.TAIL])
@@ -544,7 +546,7 @@ class Node:
                 print("predecessor ID: " , self.predecessor[0][0])
             print("===============================================")
             print("=============== FINGER TABLE ==================")
-            print(self.finger_table)
+            self.print_finger()
             # print("===============================================")
             # print("DATA STORE")
             # print("===============================================")
@@ -581,7 +583,7 @@ class Node:
             if self.id == self.successor[0][0]:
                 # print("changing my succ", node_id)
                 self.successor[0] = node_info
-                self.finger_table[0][1] = self.successor[0]
+                self.finger_table[0][1] [0] = self.successor[0]
         print(core.ANSI_colors['default'])
     
     def fix_fingers(self):
@@ -599,8 +601,9 @@ class Node:
             if data == None:
                 time.sleep(10)
                 continue
-            
-            self.finger_table[random_index][1] = data
+            print(f"{finger}  successor : {data}")
+            self.finger_table[random_index][1] [0] = data
+            self.print_finger()
             time.sleep(10)
 
     def check_predecessor(self):
@@ -626,6 +629,10 @@ class Node:
 
     def get_forward_distance(self, node2, node1):
         return pow(2,RING_SIZE) - self.get_backward_distance(node2,node1)
+
+    def print_finger(self):
+        for finger in self.finger_table:
+            print(f"{finger[0]} , {finger[1][0]}")
 
 # d1 = Node('172.20.0.5',7777)
 # d2 = Node('172.20.0.7',7777)
