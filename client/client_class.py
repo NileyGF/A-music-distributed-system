@@ -231,8 +231,9 @@ if __name__ == "__main__":
 
     cl = Client()
     print("---------- Welcome: ----------\nTo see the aviable songs type: 'song list'\nTo request a song type: 'song <id>'",
-            "\n where <id> is the number of the desired song. The songs will be saved in /cache.\n\n")
+            "\n where <id> is the number of the desired song. The songs will be saved in /cache.")
     while True:
+        print('      ------------------------       ')
         order:str = input()
         if order == 'song list':
             # Request Song List
@@ -250,7 +251,7 @@ if __name__ == "__main__":
             duration_sec = row[4] / 1000 
             number_of_chunks:float = duration_sec / row[5]
             number_of_chunks = math.ceil(number_of_chunks)
-
+            print(number_of_chunks)
             cl.request_song(id,number_of_chunks)
         else: 
             print('Wrong request!!')

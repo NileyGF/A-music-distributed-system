@@ -21,19 +21,20 @@ def create_db(data_base_file_path:str):
 
     'sqlite_database'
     """
+    connection = None
     try:
         if data_base_file_path[len(data_base_file_path)-3:] != '.db':
             data_base_file_path += '.db'
         connection = sqlite3.connect(data_base_file_path)
-        cursor = connection.cursor()
+        # cursor = connection.cursor()
         print("Database created and Successfully Connected to SQLite")
 
-        sqlite_select_Query = "select sqlite_version();"
-        cursor.execute(sqlite_select_Query)
-        record = cursor.fetchall()
-        print("SQLite Database Version is:", record)
+        # sqlite_select_Query = "select sqlite_version();"
+        # cursor.execute(sqlite_select_Query)
+        # record = cursor.fetchall()
+        # print("SQLite Database Version is:", record)
         connection.commit()
-        cursor.close()
+        # cursor.close()
 
     except sqlite3.Error as error:
         print("Error while connecting to sqlite:", error)
@@ -58,11 +59,12 @@ def create_table(data_base_file_path:str, table_name:str, columns_list:list):
             'genre TEXT NOT NULL'
             ]
     """
+    connection = None
     if len(columns_list) == 0:
         return False
     try:
         connection = sqlite3.connect(data_base_file_path)
-        create_table_query = "CREATE TABLE " + table_name + ' ( ' 
+        create_table_query = "CREATE TABLE if not exists " + table_name + ' ( ' 
         for i in range(len(columns_list)):
             column = columns_list[i]
             create_table_query = create_table_query + column
@@ -74,8 +76,7 @@ def create_table(data_base_file_path:str, table_name:str, columns_list:list):
         print("Successfully Connected to SQLite")
         cursor.execute(create_table_query)
         connection.commit()
-        print("SQLite table created")
-
+        print(f"table {table_name} in database OK")
         cursor.close()
 
     except sqlite3.Error as error:
@@ -115,7 +116,7 @@ def insert_rows(data_base_file_path:str,table_name:str,columns_names:str,row_tup
         cursor = connection.cursor()
         print("Connected to SQLite")
 
-        sqlite_query = "INSERT INTO " + table_name + " ( " + columns_names + " ) VALUES "
+        sqlite_query = "INSERT OR REPLACE INTO " + table_name + " ( " + columns_names + " ) VALUES "
         # for row in row_tuples_tuple:
         value = '(' + ('?,'*(len(row_tuples_tuple[0])-1)) + '?);'
         insert = sqlite_query + value
@@ -293,6 +294,13 @@ def songs_list_from_directory(dir_path:str):
             songs_list.append(os.path.join(dir_path, path))
     return songs_list
 
+def insert_rows_into_songs(songs_tags_list:list,data_base_file_path:str='spotify_db.db'):
+    tuple_tags = tuple(songs_tags_list)
+    insert_rows(data_base_file_path, 'songs', 'id_S, title, artists, genre, duration_ms, chunk_slice', tuple_tags)
+    
+def insert_rows_into_chunks(chunks_list:list,data_base_file_path:str='spotify_db.db'):
+    tuple_chunks = tuple(chunks_list)
+    insert_rows(data_base_file_path, 'chunks', 'id_Chunk, chunk, id_S', tuple_chunks)
 
 def get_a_chunk(start_time_ms:int, id_S:int,data_base_file_path:str='spotify_db.db'):
     """ Returns the chunk containing start_time_ms millisecond of the song with id = id_S"""
@@ -343,4 +351,11 @@ def get_aviable_songs(data_base_file_path:str='spotify_db.db'):
     """ List all songs' tags  in the specified database"""
     s_list = read_data(data_base_file_path, "SELECT * from songs")
     return s_list
+
+def get_chunks_rows_for_song(id_S:int,data_base_file_path:str='spotify_db.db') -> list:
+    query = "SELECT * from chunks where id_S = " + str(id_S)
+
+    chunks_row = read_data(data_base_file_path,query)
+
+    return chunks_row
 

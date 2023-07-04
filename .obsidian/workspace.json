@@ -1,0 +1,163 @@
+{
+  "main": {
+    "id": "eaa5a3da4ef0cdff",
+    "type": "split",
+    "children": [
+      {
+        "id": "1ceda1822506304e",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b293f45ae17fd64a",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Report.md",
+                "mode": "preview",
+                "source": false
+              }
+            }
+          }
+        ],
+        "stacked": true
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "32da271e2202a6a3",
+    "type": "split",
+    "children": [
+      {
+        "id": "55886f354acf2a80",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "0b807b98484c1ae3",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "075abd0d3e6cb404",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "14ce99f4c0fde102",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "209bd06c0ad595c1",
+    "type": "split",
+    "children": [
+      {
+        "id": "0400c26d738ac1ce",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "34569449ac1a374f",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Report.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "4375a51c32e01539",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Report.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "16ae4f325d33385e",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              }
+            }
+          },
+          {
+            "id": "eec5b49511381894",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Report.md"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir quick switcher": false,
+      "graph:Abrir vista de gráfico": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Abrir la nota de hoy": false,
+      "templates:Insertar plantilla": false,
+      "command-palette:Abrir paleta de comandos": false
+    }
+  },
+  "active": "b293f45ae17fd64a",
+  "lastOpenFiles": [
+    "System_view.png",
+    "App_view.png",
+    "Report.md",
+    "README.md",
+    "Report.pdf",
+    "spotify.pdf",
+    "System_view.drawio",
+    "client/__pycache__/errors.cpython-311.pyc",
+    "client/__pycache__/core.cpython-311.pyc",
+    "client/__pycache__/client_class.cpython-311.pyc"
+  ]
+}

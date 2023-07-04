@@ -101,8 +101,9 @@ def receive_data_from(connection: socket.socket, bytes_flow: int = 1024, waiting
 
     print('Failed iter: ', i, '. Received data = ', len(data))
     if len(data) > 0:
-        try: print(pickle.loads(data))
-        except: pass
+        # try: print(pickle.loads(data))
+        # except: pass
+        pass
     else:
         print('\n\t Unresponsive ',connection)
     return data

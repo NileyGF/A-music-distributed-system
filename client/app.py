@@ -106,7 +106,7 @@ class Form(CTk):
         frame.columnconfigure([0,1],weight=1)
         frame.rowconfigure([0,1,2,3,4,5],weight=1)
             
-        logo=tk.PhotoImage(file='/home/akeso/Documents/VSCode/A-music-distributed-system/client/images/logo.png')
+        logo=tk.PhotoImage(file='/Users/josue/Documents/Ciencias de la Computación/4to/Distributed Spotify/A-music-distributed-system/client/images/logo.png')
         
         CTkLabel(self,image=logo,text="").grid(columnspan=2,row=0,column=0,padx=12,pady=10,sticky='N')
     
