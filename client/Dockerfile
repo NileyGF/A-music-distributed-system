@@ -8,16 +8,16 @@ RUN pip3 install -r requirements.txt
 
 RUN pip3 install pydub
 RUN pip3 install mutagen
-RUN apt-get update && \
-    apt-get install -y python3-tk
-RUN pip install customtkinter
-RUN pip install pygame
+# RUN apt-get update
+# RUN apt-get -y install build-essential
+# #     apt-get install -y python3-tk
+# RUN apt-get -y install git curl libsdl2-mixer-2.0-0 libsdl2-image-2.0-0 libsdl2-2.0-0
+# # RUN pip install customtkinter
+# RUN pip3 install simpleaudio
 # RUN apt-get install libglib2.0-dev
-
+RUN pip3 install flask
 # ENV DISPLAY=127.0.0.1:0.0
-
 COPY . .
+EXPOSE 5000
 
-ARG type
-ARG ip
-CMD python3.11 client_class.py type ip
+CMD python3.11 app2.py

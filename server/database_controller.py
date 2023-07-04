@@ -26,15 +26,15 @@ def create_db(data_base_file_path:str):
         if data_base_file_path[len(data_base_file_path)-3:] != '.db':
             data_base_file_path += '.db'
         connection = sqlite3.connect(data_base_file_path)
-        cursor = connection.cursor()
+        # cursor = connection.cursor()
         print("Database created and Successfully Connected to SQLite")
 
-        sqlite_select_Query = "select sqlite_version();"
-        cursor.execute(sqlite_select_Query)
-        record = cursor.fetchall()
-        print("SQLite Database Version is:", record)
+        # sqlite_select_Query = "select sqlite_version();"
+        # cursor.execute(sqlite_select_Query)
+        # record = cursor.fetchall()
+        # print("SQLite Database Version is:", record)
         connection.commit()
-        cursor.close()
+        # cursor.close()
 
     except sqlite3.Error as error:
         print("Error while connecting to sqlite:", error)
@@ -64,7 +64,7 @@ def create_table(data_base_file_path:str, table_name:str, columns_list:list):
         return False
     try:
         connection = sqlite3.connect(data_base_file_path)
-        create_table_query = "CREATE TABLE " + table_name + ' ( ' 
+        create_table_query = "CREATE TABLE if not exists " + table_name + ' ( ' 
         for i in range(len(columns_list)):
             column = columns_list[i]
             create_table_query = create_table_query + column
@@ -76,8 +76,7 @@ def create_table(data_base_file_path:str, table_name:str, columns_list:list):
         print("Successfully Connected to SQLite")
         cursor.execute(create_table_query)
         connection.commit()
-        print("SQLite table created")
-
+        print(f"table {table_name} in database OK")
         cursor.close()
 
     except sqlite3.Error as error:
@@ -117,7 +116,7 @@ def insert_rows(data_base_file_path:str,table_name:str,columns_names:str,row_tup
         cursor = connection.cursor()
         print("Connected to SQLite")
 
-        sqlite_query = "INSERT INTO " + table_name + " ( " + columns_names + " ) VALUES "
+        sqlite_query = "INSERT OR REPLACE INTO " + table_name + " ( " + columns_names + " ) VALUES "
         # for row in row_tuples_tuple:
         value = '(' + ('?,'*(len(row_tuples_tuple[0])-1)) + '?);'
         insert = sqlite_query + value
