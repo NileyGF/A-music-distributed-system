@@ -47,7 +47,7 @@
 </style>
 
 <div class="select-box">
-  <select size="{{ songs|length }}">
+  <select id="songs-select" size="{{ songs|length }}">
     {% for opcion in songs %}
       <option value="{{ opcion }}">{{ opcion }}</option>
     {% endfor %}
@@ -55,12 +55,23 @@
 </div>
 
 <script>
-  const selectElement = document.getElementById('songSelect');
-  let selectedOption = '';
-
-  selectElement.addEventListener('change', (event) => {
-    selectedOption = event.target.value;
+ 
+  $(document).ready(function() {
+  $("form").submit(function(event) {
+    event.preventDefault(); // Prevent the form from submitting normally
+    $.ajax({
+      url: "/",
+      type: "POST",
+      success: function(data) {
+        // Update the select box with the received song names
+        $("#song-select").html(data.songs);
+      },
+      error: function() {
+        alert("Error occurred while loading songs.");
+      }
+    });
   });
+});
 </script>  
 
 
