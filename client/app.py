@@ -23,21 +23,19 @@ def index():
 
 @app.route('/on_download_click', methods=['POST'])
 def on_download_click():
-        selected_song=request.form.get("selectedOption")
-        # selected_song = list_box.curselection()
-        duration_sec = selected_song[4] / 1000 
-        number_of_chunks:float = duration_sec / selected_song[5]
+        selected_song = request.json.get("selectedValues")
+        selected_song = tuple(map(str, str(selected_song).split(', ')))
+        duration_sec = int(selected_song[4]) / 1000 
+        number_of_chunks:float = duration_sec / int("".join(filter(str.isdigit,selected_song[5])))
         number_of_chunks = math.ceil(number_of_chunks)
-        download_song(selected_song[0], number_of_chunks)
+        download_song(int("".join(filter(str.isdigit, selected_song[0]))), number_of_chunks)
         return render_template('index.html',user_image=Flask_Logo,songs=songs)
 
 @app.route('/on_play_click', methods=['POST'])    
 def on_play_click():
         selected_song = request.json.get("selectedValues")
         
-        print('1-',str(selected_song))
         selected_song = tuple(map(str, str(selected_song).split(', ')))
-        # selected_song = list_box.curselection()
         duration_sec = int(selected_song[4]) / 1000 
         number_of_chunks:float = duration_sec / int("".join(filter(str.isdigit,selected_song[5])))
         number_of_chunks = math.ceil(number_of_chunks)
@@ -58,6 +56,7 @@ def on_load_click():
     # self.list_box.delete(0,tk.END)
     client.refresh_song_list()
     song_list = client.song_list
+    print(song_list)
     for i, sl in enumerate(song_list):
         songs.insert(i,sl)
     return render_template('index.html',user_image=Flask_Logo,songs=songs)
@@ -79,9 +78,15 @@ def play_song(song_id, number_of_chunks):
         process.start()
     
 def download_song(song_id, number_of_chunks):
-    if not client.request_song(song_id, number_of_chunks):
-        # messagebox.showerror('Error', 'No se pudo descargar la canción')
-        return
+    for i in range(number_of_chunks):
+        if i < 10:
+            cs = '00'+ str(i)
+        elif i < 100:
+            cs = '0' + str(i)
+        try: 
+            wave=AudioSegment.from_mp3(f'{song_id}_dice_{cs}.mp3')
+        except:
+            chunk = client.request_song_from(song_id, i*10*1000,number_of_chunks)
     
 
 if __name__ == '__main__':
