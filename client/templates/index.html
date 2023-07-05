@@ -45,53 +45,85 @@
     font-size: 24px;
   }
 </style>
-
-<div class="select-box">
-  <select id="songs-select" size="{{ songs|length }}">
+ <div class="select-box">
+        <form>
+            <label for="songs-select">Select one song:</label>
+            <select id="songs-select" size="{{ songs|length }}">
     {% for opcion in songs %}
       <option value="{{ opcion }}">{{ opcion }}</option>
     {% endfor %}
   </select>
-</div>
-
-<script>
- 
-  $(document).ready(function() {
-  $("form").submit(function(event) {
-    event.preventDefault(); // Prevent the form from submitting normally
-    $.ajax({
-      url: "/",
-      type: "POST",
-      success: function(data) {
-        // Update the select box with the received song names
-        $("#song-select").html(data.songs);
-      },
-      error: function() {
-        alert("Error occurred while loading songs.");
-      }
-    });
-  });
-});
-</script>  
-
-
-<h1>
-    <br>
-    <input type="text" placeholder="Escriba el nombre de la canción que desea" style="border-color: black; color: white; background-color: black; width: 100%; height: 40px;">
-    <br>
-    <div style="background-color: white;">
-      <form action="/on_download_click" method="post">
-        <input type="hidden" id="selectedOption" name="selectedOption" value="">
-        <button style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Descargar</button>
-      </form>
-      <form action="/on_play_click" method="post">
-        <input type="hidden" id="selectedOption" name="selectedOption" value="">
-        <button style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Reproducir</button>
-      </form>
-      <form action="/on_stop_click" method="post">
-        <button style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Parar</button>
-      </form>
+  <button id="download" style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Descargar</button>
+  <button id="play" style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Reproducir</button>
+  <button id="stop" style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Parar</button>
+        
+        </form>
     </div>
-</h1>
+  <script>
+        const play = document.querySelector('#play');
+        const download = document.querySelector('#download');
+        const stop = document.querySelector('#stop');
+        const sb = document.querySelector('#songs-select');
+
+        play.onclick = (e) => {
+            e.preventDefault();
+            const selectedValues = [].filter
+                .call(sb.options, option => option.selected)
+                .map(option => option.text);
+             fetch("/on_play_click",{
+        "method": "POST",
+        body: JSON.stringify({ selectedValues: selectedValues }),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            // Handle the success response
+        })
+        .catch(error => {
+            // Handle the error
+        });
+    };
+        download.onclick = (e) => {
+            e.preventDefault();
+            const selectedValues = [].filter
+                .call(sb.options, option => option.selected)
+                .map(option => option.text);
+             fetch("/on_download_click",{
+        "method": "POST",
+        body: JSON.stringify({ selectedValues: selectedValues }),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            // Handle the success response
+        })
+        .catch(error => {
+            // Handle the error
+        });
+      };
+      stop.onclick = (e) => {
+            e.preventDefault();
+            
+             fetch("/on_stop_click",{
+        "method": "POST",
+        body: JSON.stringify({ selectedValues: selectedValues }),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            // Handle the success response
+        })
+        .catch(error => {
+            // Handle the error
+        });
+    };
+    </script>
+
 </body>
 </html>
