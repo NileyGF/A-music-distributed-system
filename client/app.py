@@ -22,7 +22,8 @@ def index():
     return render_template('index.html',user_image=Flask_Logo,songs=songs)
 
 @app.route('/on_download_click', methods=['POST'])
-def on_download_click(selected_song):
+def on_download_click():
+        selected_song=request.form.get("selectedOption")
         # selected_song = list_box.curselection()
         duration_sec = selected_song[4] / 1000 
         number_of_chunks:float = duration_sec / selected_song[5]
@@ -31,12 +32,16 @@ def on_download_click(selected_song):
         return render_template('index.html',user_image=Flask_Logo,songs=songs)
 
 @app.route('/on_play_click', methods=['POST'])    
-def on_play_click(selected_song):
+def on_play_click():
+        selected_song = request.json.get("selectedValues")
+        
+        print('1-',str(selected_song))
+        selected_song = tuple(map(str, str(selected_song).split(', ')))
         # selected_song = list_box.curselection()
-        duration_sec = selected_song[4] / 1000 
-        number_of_chunks:float = duration_sec / selected_song[5]
+        duration_sec = int(selected_song[4]) / 1000 
+        number_of_chunks:float = duration_sec / int("".join(filter(str.isdigit,selected_song[5])))
         number_of_chunks = math.ceil(number_of_chunks)
-        play_song(selected_song[0], number_of_chunks)
+        play_song(int("".join(filter(str.isdigit, selected_song[0]))), number_of_chunks)
        
         return render_template('index.html',user_image=Flask_Logo,songs=songs)
 
@@ -68,8 +73,8 @@ def play_song(song_id, number_of_chunks):
             wave=AudioSegment.from_mp3(f'{song_id}_dice_{cs}.mp3')
             process=Process(target=play, args=(wave,) )
         except:
-            chunk = client.request_song_from(song_id, i*10*1000)
-            wave=AudioSegment.from_file(f'{song_id}_dice_{cs}.mp3')
+            chunk = client.request_song_from(song_id, i*10*1000,number_of_chunks)
+            wave=AudioSegment.from_mp3(f'{song_id}_dice_{cs}.mp3')
             process=Process(target=play, args=(wave,) )
         process.start()
     
