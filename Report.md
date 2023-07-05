@@ -57,7 +57,7 @@ En este nuevo terminal, se puede comprobar que los requerimientos han sido insta
 python3 server_class.py <server_type> <container_ip> <DNS_ip, optional>
 ```
 
-    En `<server_type>` corresponde un número entre 0 y 3, según lo explicado anteriormente. En `<container_ip>` va la dirección asignada al contenedor. En `<DNS_ip, optional>` va la dirección del contenedor donde se ejecute el DNS y solo es necesaria si es distinta a `'172.20.0.2'`.
+En `<server_type>` corresponde un número entre 0 y 3, según lo explicado anteriormente. En `<container_ip>` va la dirección asignada al contenedor. En `<DNS_ip, optional>` va la dirección del contenedor donde se ejecute el DNS y solo es necesaria si es distinta a `'172.20.0.2'`.
 
 ### *Clientes*
 
@@ -114,6 +114,8 @@ Finalmente, la función de mantenimiento de consistencia conlleva a que cuando s
 - **Data**: el role de manejo de datos fue implementado como un nodo que utiliza SQLite para almacenar las canciones como fragmentos cortos (por ejemplo, 10 segundos) en una base de datos dividida en dos tablas: una para los tags musicales y otra para la multimedia en sí misma. Está diseñado para manejar cuatro tipos de solicitudes: mostrar la lista de canciones disponibles, confirmar si puede ofrecer una canción específica, entregar un fragmento específico a partir de un tiempo en milisegundos, y suministrar varios fragmentos a partir de un tiempo determinado. 
 
 De esta forma garantizamos que puede proveer todos los fragmento de una canción, los fragmentos a partir de un tiempo t, o solo un fragmento específico. Esta estrategia se desarrolló como medida de tolerancia a fallos y para mejorar la velocidad general del sistema, permitiendo al cliente empezar a reproducir la canción sin tener que esperar hasta que se haya descargado completamente.
+
+Los nodos de datos constituyen un hash table al estilo CHORD, para garantizar la escalabilidad y eficiencia del sistema.
 
 ## **Asignación de roles dinámicamente**
 
@@ -180,10 +182,12 @@ finally:
     if connection:
         connection.close()
         print("The sqlite connection is closed") 
-````
+```
 
 ## **Replicación y consistencia**
-Al unirse al anillo, un servidor de datos, se comunica con alguno de los servidores de datos existentes para replicar los datos. Para mantener la consistencia y el sistema funcional intentamos garantizar que existan al menos 2 servidores de datos en todo momento, con los datos replicados. De esta forma si alguno se desconecta, aún persisten los datos importantes y a través del anillo se cambian los roles de ser necesario para mantener 2 nodos de datos. 
+Cuando un nodo asume el role de servidor de datos, se comunica con alguno de los servidores de datos existentes para encontrar su sucesor en el anillo de CHORD. Luego se comunica con su sucesor para obtener todos los datos que tiene con id <= que el nuevo nodo. 
+
+Para mantener la consistencia y el sistema funcional intentamos garantizar que existan al menos 2 servidores de datos en todo momento. De esta forma si alguno se desconecta y se logró replicar los datos, no se pierde la información.
 
 ## **Grupos** 
 La principal aproximación para tolerar la falla de procesos es organizar varios procesos idénticos en grupos. Nuestra implementación es de grupos planos, no jerárquicos. Ante una falla, aunque el grupo tenga un integrante menos continua su funcionamiento, a menos que quede vacío, por supuesto. Tanto los nodos de datos como los routers tienen un grupo. De forma que cuando se quiere solicitar algo a uno de estos roles se pide al DNS la dirección del grupo, y este retorna una lista con todos los integrantes activos en el momento, en el grupo. De esta forma se pueden hacer peticiones a uno o más miembros del grupo, de forma iterativa o simultánea.
@@ -193,7 +197,7 @@ Implementamos técnicas de balance de cargas en varios momentos. En la instancia
 
 ## **Tolerancia a fallas**
 La tolerancia a fallas está fuertemente relacionada con los Sistemas Dependientes. La dependencia cubre un conjunto de requerimientos donde se incluyen los siguientes:
-- Disponibilidad : un sistema altamente disponible es aquel se encuentra trabajando en cualquier instante de tiempo. Nosotros garantizamos disponibilidad siempre que exista al menos un nodo en cada rol.
+- Disponibilidad : un sistema altamente disponible es aquel se encuentra trabajando en cualquier instante de tiempo. Nosotros garantizamos disponibilidad siempre que exista al menos un nodo en cada role.
 
 - Confiabilidad : la confiabilidad está definida en términos de intervalos de tiempo en vez de instantes de tiempo. Un sistema altamente confiable es aquel que puede funcionar sin interrupción por largos períodos de tiempo. Dado que depende de la estabilidad de la conexión solo podemos garantizar que tenemos mecanismos de reintentar las peticiones varias veces antes de darle a conocer al usuario que hubo fallo. Introduciento cierta medida de transparencia y dando oportunidad a que el sistema falle y pueda reconectarse y completar la tarea.
 
