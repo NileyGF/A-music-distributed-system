@@ -318,9 +318,9 @@ def get_a_chunk(start_time_ms:int, id_S:int,data_base_file_path:str='spotify_db.
         if len(chunk) > 0:
             chunk = chunk[0]   
     chunk = chunk[1]
-    sound = AudioSegment.from_mp3(io.BytesIO(chunk))
+    # sound = AudioSegment.from_mp3(io.BytesIO(chunk))
 
-    return sound
+    return chunk
     
 def get_n_chunks(start_time_ms:int, id_S:int, n:int,data_base_file_path:str='spotify_db.db'):
     """ Returns n chunks, beginning in the one containing start_time_ms millisecond of the song with id = id_S"""

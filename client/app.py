@@ -69,11 +69,11 @@ def play_song(song_id, number_of_chunks):
         elif i < 100:
             cs = '0' + str(i)
         try: 
-            wave=AudioSegment.from_mp3(f'{song_id}_dice_{cs}.mp3')
+            wave=AudioSegment.from_mp3(f'cache/{song_id}_dice_{cs}.mp3')
             process=Process(target=play, args=(wave,) )
         except:
             chunk = client.request_song_from(song_id, i*10*1000,number_of_chunks)
-            wave=AudioSegment.from_mp3(f'{song_id}_dice_{cs}.mp3')
+            wave=AudioSegment.from_mp3(f'cache/{song_id}_dice_{cs}.mp3')
             process=Process(target=play, args=(wave,) )
         process.start()
     
@@ -84,7 +84,7 @@ def download_song(song_id, number_of_chunks):
         elif i < 100:
             cs = '0' + str(i)
         try: 
-            wave=AudioSegment.from_mp3(f'{song_id}_dice_{cs}.mp3')
+            wave=AudioSegment.from_mp3(f'cache/{song_id}_dice_{cs}.mp3')
         except:
             chunk = client.request_song_from(song_id, i*10*1000,number_of_chunks)
     
