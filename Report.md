@@ -5,7 +5,7 @@
 - Niley González Ferrales C-411   [@NileyGF](https://github.com/NileyGF)
 - Josué Rodríguez Ramírez C-412   [@josueRdgz](https://github.com/josueRdgz)
 
-### Proyecto en github: https://github.com/NileyGF/A-music-distributed-system
+### Proyecto en Github: https://github.com/NileyGF/A-music-distributed-system
 
 ## **Introducción**
 
@@ -21,30 +21,30 @@ Solo es necesario tener instalado docker, ya que la imagen de docker tiene todas
 ### *Servidores*
 
 En la carpeta `server` se ejecuta:
-
-    docker build -t server . 
-
+```shell
+docker build -t server . 
+```
 o 
-
-    docker load -i <path/server.tar>
-
-Eso crea la imagen de los servidores. Despúes es necesario crear una red de docker, donde interactuarán los contenedores de los servidores.
-
-    docker network create --driver bridge --subnet=172.20.0.0/16 dispotify_network
-
+``` shell
+docker load -i <path/server.tar>
+```
+Eso crea la imagen de los servidores. Después es necesario crear una red de docker, donde interactuarán los contenedores de los servidores.
+```shell
+docker network create --driver bridge --subnet=172.20.0.0/16 dispotify_network
+```
 Luego, por cada servidor que se desee activar hay que seguir los siguientes pasos:
 
 1. Crear un contenedor. Seguido el parámetro --ip hay que introducir una dirección IP válida que esté en el rango de la subred especificada al crear la red de docker, que tiene ser distinta para cada contenedor/servidor creado. Además, después de --name debe introducirse el nombre con que se identificará el contenedor
-
-        docker run --net dispotify_network --ip <valid ip in 172.20.0.0/16, like 172.20.0.2> -it -d --name <container_name> server bash
-
+``` shell
+docker run --net dispotify_network --ip <valid ip in 172.20.0.0/16, like 172.20.0.2> -it -d --name <container_name> server bash
+```
 2. Luego, se ejecuta el contenedor en un terminal bash con el siguiente comando: 
-
-        docker exec -it <container_name> /bin/bash
-
+```shell
+docker exec -it <container_name> /bin/bash
+```
 En este nuevo terminal, se puede comprobar que los requerimientos han sido instalados ejecutando, por ejemplo `python3 --version`. 
 
-3. Para ejecutar un servidor específico es necesario aclarar algunos parámetros como el tipo de servidor y la dirección del seridor. 
+3. Para ejecutar un servidor específico es necesario aclarar algunos parámetros como el tipo de servidor y la dirección del servidor. 
 
     Los tipos de servidores son:
         0 - Servidor sin Role predefinido
@@ -53,35 +53,49 @@ En este nuevo terminal, se puede comprobar que los requerimientos han sido insta
         3 - Servidor router
     
     El ip del servidor que hay que poner es el del contenedor donde se está ejecutando. Además si la dirección del DNS no es la default (172.20.0.2), también hay que proveerla.
-
-        python3 server_class.py <server_type> <container_ip> <DNS_ip, optional>
+```shell
+python3 server_class.py <server_type> <container_ip> <DNS_ip, optional>
+```
 
     En `<server_type>` corresponde un número entre 0 y 3, según lo explicado anteriormente. En `<container_ip>` va la dirección asignada al contenedor. En `<DNS_ip, optional>` va la dirección del contenedor donde se ejecute el DNS y solo es necesaria si es distinta a `'172.20.0.2'`.
 
 ### *Clientes*
 
 En la carpeta `client` se ejecuta:
-
-    docker build -t client . 
-
+```shell
+docker build -t client . 
+```
 o 
-
-    docker load -i <path/client.tar>
+```shell
+docker load -i <path/client.tar>
+```
 
 Eso crea la imagen de los clientes.
 
 1. Por cada cliente que se desee unir al sistema  se crea un contenedor, con nombres distintos, utilizando el siguiente comando:
-
-        docker run --net dispotify_network -it -d --name <client_x> client bash
-
+```shell
+docker run --net dispotify_network -it -d --name <client_x> client bash
+```
 2. Luego, se ejecuta el contenedor en un terminal bash con el siguiente comando: 
-
-        docker exec -it <client_x> /bin/bash
-
+```shell
+docker exec -it <client_x> /bin/bash
+```
 3. Por último se ejecuta el cliente con :
+```shell
+python3 client_class.py <DNS_ip, optional>
+```
+ 4. O puede iniciarse la aplicación web que correrá en 127.0.0.1:8080 con:
+```shell
+python3 app.py
+```
 
-        python3 client_class.py <DNS_ip, optional>
+# Aplicación web
+Para el front-end de este proyecto decidimos utilizar Flask, una biblioteca de python que nos permite desarrollar sencillas aplicaciones web con el uso de decoradores (Para el desarrollo web fue necesario una view en html con métodos en javascript para su actualización dinámica). Es de fácil implementación y la comunicación con el resto del sistema es más directa que otros frameworks.
 
+El usuario puede solicitar la lista de canciones (**Cargar**) y solicitar una para reproducirla en streaming (**Reproducir**) o descargarla sin reproducirse (**Descargar**). Además puede parar la reproducción en cualquier momento (**Parar**). 
+Cada `chunk` de las canciones reproducidas se guardan en caché para evitar descargas posteriores. Esto permite que en una descarga posterior solo se solicite a los servidores los `chunks` no descargados.
+
+![[App_view.png]]
 ## **Roles del sistema:**
 
 - **DNS**: implementamos este role para resolver dinámicamente la entrada al sistema tanto desde los clientes como desde otros servidores. Tiene tres funciones principales: agregar registros, resolución de nombre y mantenimiento de consistencia.
@@ -93,10 +107,7 @@ La resolución de nombre permite obtener todas las direcciones IP de los nodos a
 Finalmente, la función de mantenimiento de consistencia conlleva a que cuando se inicia un nodo DNS se crea un subproceso que revisa periódicamente todos los registros almacenados para determinar si han expirado. Si es así, se contacta con el servidor correspondiente para comprobar su estado y, si responde correctamente, se renueva el TTL. Además, asegura que la dirección devuelta sea válida en el momento de la consulta.
 
 - **Client**: este rol se encarga de manejar las solicitudes del usuario y comunicarse con el sistema de servidores distribuidos según sea necesario. Sus dos tareas principales incluyen actualizar la lista de metadatos de la música y solicitar canciones específicas al sistema para almacenarlas en cache y reproducirlas para el usuario.
-	> [!info] App en desarrollo
-	>  ------------------------------
-	>  
-	>  ![|434x485](App_view.png)
+
 
 - **Router**: su papel principal es manejar las solicitudes de los clientes, proporcionándoles información actualizada sobre listas de canciones y, dada una canción que el cliente desee, localizar los proveedores activos que ofrezcan la canción solicitada y enviar sus direcciones al cliente. Todo ello mientras intenta mantener balance en el sistema con estrategias estocásticas.
 
@@ -110,7 +121,7 @@ Los servidores de datos y routers conforman un anillo para garantizar la disponi
 
 En este anillo, cada integrante tiene una referencia a los 2 nodos que hay hacia adelante, y la referencia a su antecesor. Cuando un nuevo servidor llega, contacta con algún participante en el anillo y le pide unirse. Ese a su vez le proporciona sus referencias hacia adelante y actualiza al recién llegado como su nuevo sucesor. 
 
-Además todos los nodos, al unirse al anillo crean un subproceso de supervisión para monitorear la consistencia del anillo y enviar informes periódicos a su sucesor. Si un servidor se desconecta y es detectado por este mecanismo, se envía un mensaje de alerta por todo el anillo y cada nodo incluye su información en el mensaje al reenviarlo. Cuando el mensaje vuelve al que detectó la falla (que se convierte en un Manager temporal), se contabilizan la cantidad de nodos en el anillo de cada role. Si se alcanza el mínimo en alguno, se envía un mensaje de Desbalance por el anillo, explicando que role es necesario. Cuando el primer servidor con el role opuesto al necesario recibe el mensaje, cambia de role para mantener la disponibilidad y funcionalidad del sistema distribuidado.
+Además todos los nodos, al unirse al anillo crean un subproceso de supervisión para monitorear la consistencia del anillo y enviar informes periódicos a su sucesor. Si un servidor se desconecta y es detectado por este mecanismo, se envía un mensaje de alerta por todo el anillo y cada nodo incluye su información en el mensaje al reenviarlo. Cuando el mensaje vuelve al que detectó la falla (que se convierte en un Manager temporal), se contabilizan la cantidad de nodos en el anillo de cada role. Si se alcanza el mínimo en alguno, se envía un mensaje de Desbalance por el anillo, explicando que role es necesario. Cuando el primer servidor con el role opuesto al necesario recibe el mensaje, cambia de role para mantener la disponibilidad y funcionalidad del sistema distribuido.
 
 >[!note] Arquitectura del Sistemas
 >  ------------------------------
@@ -140,14 +151,14 @@ El nodo de DNS gestiona registros de tipo A. Un registro A posee los siguientes 
 
     datos (datos reales del registro, osea, dirección: (IP, puerto) ).
 
-Al inicializarce una instancia se crea un diccionario de 'headers' que por cada solicitud que puede recibir tiene como valor la función que la maneja. También empieza un subproceso para actualizar los registros basándose en sus valores de TTL.
+Al inicializarse una instancia se crea un diccionario de 'headers' que por cada solicitud que puede recibir tiene como valor la función que la maneja. También empieza un subproceso para actualizar los registros basándose en sus valores de TTL.
 
 ## **Coordinación**
 Decidimos implementar una arquitectura descentralizada de anillo sin líder (explicada anteriormente). Dónde cualquiera puede insertar nuevos nodos al anillo y puede ejercer de Manager temporal si detecta una desconexión. Esta arquitectura se enfoca en evitar la introducción de más fuentes de falla; minimizando los posibles problemas de estabilidad que surgen de modelos centralizados, como sería la inclusión de un líder.  
 
 ## **Transacciones en la base de datos**
 Los nodos de acceso a datos utilizan operaciones de transacción al acceder y modificar la base de datos. Por ejemplo al insertar valores solo se hace commit luego de que todas las operaciones indicadas se hallan ejecutado exitosamente, si falla alguna inserción no se hace commit y se indica el error que ocurrió.
-```z
+``` python
 try:
     connection = sqlite3.connect(data_base_file_path)
     cursor = connection.cursor()
@@ -172,7 +183,7 @@ finally:
 ````
 
 ## **Replicación y consistencia**
-Al unirse al anillo, un servidor de datos, se comunica con alguno de los servidores de datos existentes para replicar los datos. Para mantener la consistencia y el sistema funcional ntentamos garantizar que existan al menos 2 servidores de datos en todo momento, con los datos replicados. De esta forma si alguno se desconecta, aún persisten los datos importantes y a través del anillo se cambian los roles de ser necesario para mantener 2 nodos de datos. 
+Al unirse al anillo, un servidor de datos, se comunica con alguno de los servidores de datos existentes para replicar los datos. Para mantener la consistencia y el sistema funcional intentamos garantizar que existan al menos 2 servidores de datos en todo momento, con los datos replicados. De esta forma si alguno se desconecta, aún persisten los datos importantes y a través del anillo se cambian los roles de ser necesario para mantener 2 nodos de datos. 
 
 ## **Grupos** 
 La principal aproximación para tolerar la falla de procesos es organizar varios procesos idénticos en grupos. Nuestra implementación es de grupos planos, no jerárquicos. Ante una falla, aunque el grupo tenga un integrante menos continua su funcionamiento, a menos que quede vacío, por supuesto. Tanto los nodos de datos como los routers tienen un grupo. De forma que cuando se quiere solicitar algo a uno de estos roles se pide al DNS la dirección del grupo, y este retorna una lista con todos los integrantes activos en el momento, en el grupo. De esta forma se pueden hacer peticiones a uno o más miembros del grupo, de forma iterativa o simultánea.
