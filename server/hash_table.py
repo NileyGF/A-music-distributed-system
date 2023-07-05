@@ -65,8 +65,8 @@ class Node:
             locate its successor or predecessor, even if the network in question suffers from a high failure rate.
             (r = 2)
         """
-        self.predecessor = manager.list([(self.id, (self.ip,self.port)),(self.id, (self.ip,self.port))])
-        self.successor = manager.list([(self.id, (self.ip,self.port)),(self.id, (self.ip,self.port))])
+        self.predecessor = manager.list([(self.id, (self.ip,self.port)),None])
+        self.successor = manager.list([(self.id, (self.ip,self.port)),None])
 
         self.finger_table = manager.list()
         for i in range(RING_SIZE):
@@ -89,15 +89,9 @@ class Node:
                         'SSccssN':0,          # Request Successor of N
                         'SPcssN':0,           # Request Predecessor of N
                         'Notify':self.notify,                   # Notify successor
+                        'NotifyP':self.notify_pred,             # Notify predecessor
                         'RSResp':self.lookup,                   # Request Song Responsible
                         'SSResp':0,           # Solve Song Responsible
-                        # 'RSList':self.request_songs_list,       # Request Songs List
-                        # 'Rsong' :self.request_song,             # Request song
-                        # 'Rchunk':self.request_chunk,            # Request chunk
-                        # 'RHSong':self.have_song,                # Request Have Song
-                        # 'NSong' :self.add_song,                 # New Song
-                        # 'DSong' :self.remove_song,              # Delete Song
-                        # 'SynData':self.sync_data_center,        # Synchronize Data Center
                         }
         multiprocessing.set_start_method('fork', force=True)
         p = multiprocessing.Process(target=self.stabilize)
@@ -143,12 +137,6 @@ class Node:
             node = None
             table.append( [entry, node] )
         return table
-
-    def query_by_song(self):
-        """Every time a node wants to look up a key k, it will pass the query 
-        to the closest successor or predecessor of k in its finger table 
-        (the "largest" one on the circle whose ID is smaller than k), 
-        until a node finds out the key is stored in its immediate successor."""
 
     def join(self,node_addr):
         """
@@ -378,14 +366,17 @@ class Node:
     def find_predecessor(self, search_id):
         """ Provides the predecessor of any value in the ring given its id."""
         if search_id == self.id:
+            print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
         if self.predecessor[0] is not None and  self.successor[0][0] == self.id:
+            print(f" ---- Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
         print(core.ANSI_colors['cyan'])
         if self.predecessor[0] is not None and self.get_forward_distance(self.id, self.successor[0][0]) > self.get_forward_distance(self.id, search_id):
             print(core.ANSI_colors['default'])
+            print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
         else:
@@ -396,11 +387,13 @@ class Node:
             # print(f"new_node_hop {new_node_hop}")
             if new_node_hop is None:
                 print(core.ANSI_colors['default'])
+                print(f" Predecessor of {search_id} is {None}")
                 return None
             ip, port = new_node_hop [1]
             if ip == self.ip and port == self.port:
                 print(core.ANSI_colors['default'])
                 # print(f" I'm predecessor")
+                print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
                 return (self.id, (self.ip, self.port))
             
             # n0.find_successor(search_id)
@@ -418,6 +411,7 @@ class Node:
                 sock.close()
                 if 'SPcssN' in decoded:
                     print(core.ANSI_colors['default'])
+                    print(f" Predecessor of {search_id} is {decoded[1]}")
                     return decoded[1]
         
         print(core.ANSI_colors['default'])
@@ -425,6 +419,7 @@ class Node:
     def find_successor(self, search_id):
         """ Provides the successor of any value in the ring given its id."""
         if(search_id == self.id):
+            print(f" Successor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
         print(core.ANSI_colors['cyan'])
@@ -432,11 +427,14 @@ class Node:
    
         if predecessor == None:
             print(core.ANSI_colors['default'])
+            print(f" Successor of {search_id} is {None}")
             return None
         if predecessor[0] == self.id:
             print(core.ANSI_colors['default'])
             if self.successor[0]:
+                print(f" Successor of {search_id} is {self.successor[0]}")
                 return self.successor[0]
+            print(f" Successor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
         request = tuple(['RSccssN',search_id,core.TAIL])
@@ -453,6 +451,7 @@ class Node:
             sock.close()
             if 'SSccssN' in decoded:
                 print(core.ANSI_colors['default'])
+                print(f" Successor of {search_id} is {decoded[1]}")
                 return decoded[1]
 
         print(core.ANSI_colors['default'])
@@ -467,7 +466,7 @@ class Node:
                 closest_node = self.finger_table[i][1][0]
                 min_distance = self.get_forward_distance(self.finger_table[i][0],search_id)
                 # print("Min distance",min_distance)
-
+        print(f" Closest preceding node of {search_id} is {(self.id, (self.ip, self.port))}")
         return closest_node
 
     def stabilize(self):
@@ -478,63 +477,66 @@ class Node:
         """
         while True:
             if self.successor[0] is None:
-                time.sleep(10)
+                time.sleep(20)
                 print(core.ANSI_colors['red'], " No successor" , core.ANSI_colors['default'])
                 continue
 
             if self.successor[0][1][0] == self.ip  and self.successor[0][1][1] == self.port:
-                time.sleep(10)
+                time.sleep(20)
                 print(core.ANSI_colors['red'], " I'm my successor", core.ANSI_colors['default'])
                 continue
             
             # get successor.predecesor
-            print(core.ANSI_colors['red'])
-            request = tuple(['RPcssN',self.successor[0][0],core.TAIL])
-            encoded = pickle.dumps(request)
-            sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-            sock.connect(self.successor[0][1])
-            sended, _ = core.send_bytes_to(encoded, sock, False)
-            if sended == 'OK':
-                result = core.receive_data_from(sock)
-                decoded = pickle.loads(result)
-                # Send ACK
-                ack = pickle.dumps(core.ACK_OK_tuple)
-                core.send_bytes_to(ack,sock,False)
-                sock.close()
-                if 'SPcssN' in decoded:
-                    if decoded[1] == None or len(decoded[1]) != 2:
-                        # notify successor that we are his predecessor
-                        request = tuple(['Notify',(self.id, (self.ip, self.port)),core.TAIL])
-                        encoded = pickle.dumps(request)
-                        sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-                        sock.connect(self.successor[0][1])
-                        sended, _ = core.send_bytes_to(encoded, sock, False)
-                        if sended == 'OK':
-                            result = core.receive_data_from(sock)
-                            decoded_ack = pickle.loads(result)
-                            sock.close()
-                            if 'ACK' in decoded_ack:
-                                print(core.ANSI_colors['default'])  
-                                continue
-                    else:
-                        succ_pred = decoded[1]
-            
-            # found predecessor of my successor
-            if self.get_backward_distance(self.id,succ_pred[0]) > self.get_backward_distance(self.id,self.successor[0][0]):
-                # if ... changing my successor in stabilize
-                self.successor[0] = succ_pred # (id, (ip, port))
-                self.finger_table[0][1] [0] = self.successor[0]
+            try:
+                print(core.ANSI_colors['red'])
+                request = tuple(['RPcssN',self.successor[0][0],core.TAIL])
+                encoded = pickle.dumps(request)
+                sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                sock.connect(self.successor[0][1])
+                sended, _ = core.send_bytes_to(encoded, sock, False)
+                if sended == 'OK':
+                    result = core.receive_data_from(sock)
+                    decoded = pickle.loads(result)
+                    # Send ACK
+                    ack = pickle.dumps(core.ACK_OK_tuple)
+                    core.send_bytes_to(ack,sock,False)
+                    sock.close()
+                    if 'SPcssN' in decoded:
+                        if decoded[1] == None or len(decoded[1]) != 2:
+                            # notify successor that we are his predecessor
+                            request = tuple(['Notify',(self.id, (self.ip, self.port)),core.TAIL])
+                            encoded = pickle.dumps(request)
+                            sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                            sock.connect(self.successor[0][1])
+                            sended, _ = core.send_bytes_to(encoded, sock, False)
+                            if sended == 'OK':
+                                result = core.receive_data_from(sock)
+                                decoded_ack = pickle.loads(result)
+                                sock.close()
+                                if 'ACK' in decoded_ack:
+                                    print(core.ANSI_colors['default'])  
+                                    continue
+                        else:
+                            succ_pred = decoded[1]
+                
+                # found predecessor of my successor
+                if self.get_backward_distance(self.id,succ_pred[0]) > self.get_backward_distance(self.id,self.successor[0][0]):
+                    # if ... changing my successor in stabilize
+                    self.successor[0] = succ_pred # (id, (ip, port))
+                    self.finger_table[0][1] [0] = self.successor[0]
 
-            # notify successor
-            request = tuple(['Notify',(self.id, (self.ip, self.port)),core.TAIL])
-            encoded = pickle.dumps(request)
-            sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-            sock.connect(self.successor[0][1])
-            sended, _ = core.send_bytes_to(encoded, sock, False)
-            if sended == 'OK':
-                result = core.receive_data_from(sock)
-                decoded_ack = pickle.loads(result)
-                sock.close()
+                # notify successor
+                request = tuple(['Notify',(self.id, (self.ip, self.port)),core.TAIL])
+                encoded = pickle.dumps(request)
+                sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                sock.connect(self.successor[0][1])
+                sended, _ = core.send_bytes_to(encoded, sock, False)
+                if sended == 'OK':
+                    result = core.receive_data_from(sock)
+                    decoded_ack = pickle.loads(result)
+                    sock.close()
+            except Exception as er:
+                print(er)
 
             print("===============================================")
             print("STABILIZING")
@@ -553,7 +555,7 @@ class Node:
             # print(str(self.data_store.data))
             print("===============================================")
             print("++++++++++++++++++++ END ++++++++++++++++++++++",core.ANSI_colors['default'])
-            time.sleep(10)
+            time.sleep(20)
 
     def notify(self, node_info, connection, address):
         """
@@ -586,34 +588,83 @@ class Node:
                 self.finger_table[0][1] [0] = self.successor[0]
         print(core.ANSI_colors['default'])
     
+    def notify_pred(self, node_info, connection, address):
+        """
+        Recevies notification from stabilized function when there is change in successor,
+        node thinks it might be our predecessor.
+        """
+        print(core.ANSI_colors['red'])
+        encoded = pickle.dumps(core.ACK_OK_tuple)
+        state, _ = core.send_bytes_to(encoded,connection,False)
+
+        node_id = node_info[0]
+        
+        if self.successor[0] is not None:
+            if self.get_forward_distance(self.id,node_id) < self.get_forward_distance(self.id,self.successor[0][0]):
+                print("changing my successor", node_id)
+                self.successor[0] = node_info
+                self.finger_table[0][1] [0] = self.successor[0]
+                print(core.ANSI_colors['default'])
+                return
+        
+        if self.successor[0] is None \
+        or ( node_id < self.successor[0][0] and node_id > self.id ) \
+        or ( self.id == self.successor[0][0] and node_id != self.id) :
+            print("changing my successor", node_id)
+            self.successor[0] = node_info
+            self.finger_table[0][1] [0] = self.successor[0]
+
+            # special case???
+            if self.id == self.successor[0][0]:
+                # print("changing my succ", node_id)
+                self.predecessor[0] = node_info
+        print(core.ANSI_colors['default'])
+    
     def fix_fingers(self):
         """
         The fix_fingers function is used to correct the finger table at regular interval of time this function waits for
         10 seconds and then picks one random index of the table and corrects it so that if any new node has joined the 
         ring it can properly mark that node in its finger table.
         """
+        i = 0
         while True:
 
-            random_index = random.randint(0,RING_SIZE-1)
-            finger = self.finger_table[random_index][0]
+            # random_index = random.randint(0,RING_SIZE-1)
+            # finger = self.finger_table[random_index][0]
+            finger = self.finger_table[i][0]
             
             data = self.find_successor(finger)
             if data == None:
-                time.sleep(10)
+                time.sleep(20)
                 continue
-            print(f"{finger}  successor : {data}")
-            self.finger_table[random_index][1] [0] = data
+            print(f"fix_fingers\t{finger} successor : {data}")
+            self.finger_table[i][1] [0] = data
             self.print_finger()
-            time.sleep(10)
+            i = i+1 
+            i = i % RING_SIZE
+            time.sleep(20)
 
     def check_predecessor(self):
         """periodically checks whether predecessor has failed."""
         while True:
             if self.predecessor[0] is not None:
-                if self.predecessor[0][0] != self.id and not core.send_ping_to(self.predecessor[0][1]):
+                if self.predecessor[0][0] != self.id:
+                    request = tuple(['NotifyP',(self.id, (self.ip, self.port)),core.TAIL])
+                    encoded = pickle.dumps(request)
+                    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                    sock.connect(self.predecessor[0][1])
+                    sended, _ = core.send_bytes_to(encoded, sock, False,verbose=False)
+                    if sended == 'OK':
+                        result = core.receive_data_from(sock,verbose=False)
+                        decoded_ack = pickle.loads(result)
+                        sock.close()
+                        if 'ACK' in decoded_ack:
+                            print(core.ANSI_colors['cyan'] + "Chord predecessor OK!" + core.ANSI_colors['default'])
+                            time.sleep(20)
+                            continue
                     self.predecessor[0] = None
                 print(core.ANSI_colors['cyan'] + "Chord predecessor OK!" + core.ANSI_colors['default'])
-            time.sleep(10)
+            time.sleep(20)
 
     def get_backward_distance(self, node2, node1):
         

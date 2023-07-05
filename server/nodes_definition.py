@@ -97,16 +97,19 @@ class Data_node(Role_node):
         try:
             dbs = core.get_addr_from_dns("distpotify.data")
             if dbs != None:
-                if len(dbs) > 0:
-                    self.chord.join((dbs[0][0],core.CHORD_PORT))
-                else:
-                    print("CREATING CHORD RING")
-                    # self.chord.predecessor[0] = (self.chord.id, (self.chord.ip,self.chord.port))
-                    # self.chord.successor[0] = (self.chord.id, (self.chord.ip,self.chord.port))
-                    # self.chord.finger_table[0][1] = (self.chord.id, (self.chord.ip,self.chord.port))
+                for node in dbs:
+                    if node[0] != self.chord.ip:
+                        print("JOINING CHORD RING")
+                        self.chord.join((node[0],core.CHORD_PORT))
+                        return
+                # if len(dbs) > 0:
+                    # print("JOINING CHORD RING")
+                    # self.chord.join((dbs[0][0],core.CHORD_PORT))
+                # else:
+                print("CREATING CHORD RING")
 
         except:
-            raise Exception("Can't join hash table")
+            print(self.chord.ip," can't join hash table")
             # raise Exception("The data server didn't receive any database. Initialize with a binary database or with the songs' path")
 
     def chord_handler(self):
