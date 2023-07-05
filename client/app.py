@@ -6,12 +6,20 @@ import os
 import client_class
 from multiprocessing import Process
 from flask import jsonify
+from werkzeug.utils import secure_filename
 
 IMG_FOLDER=os.path.join('static','IMG')
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER']=IMG_FOLDER
+app.config['UPLOAD_SONG_FOLDER']="uploads"
+ALLOWED_EXTENSIONS=set(["mp3"])
 client=client_class.Client()
-process=None
+process=None 
+def allowed_file(file):
+    file=file.split('.')
+    if file[1] in ALLOWED_EXTENSIONS:
+        return True
+    return False
 
 songs= []
 Flask_Logo=os.path.join(app.config['UPLOAD_FOLDER'],'logo.png')
@@ -19,6 +27,15 @@ Flask_Logo=os.path.join(app.config['UPLOAD_FOLDER'],'logo.png')
 def index():
     
     
+    return render_template('index.html',user_image=Flask_Logo,songs=songs)
+@app.route('/upload', methods=['POST'])
+def upload():
+    file=request.files["uploadFile"]
+    filename=secure_filename(file.filename)
+    
+    print(filename)
+    #if file and allowed_file(filename):
+        #client.upload(file)
     return render_template('index.html',user_image=Flask_Logo,songs=songs)
 
 @app.route('/on_download_click', methods=['POST'])
@@ -69,6 +86,8 @@ def play_song(song_id, number_of_chunks):
         elif i < 100:
             cs = '0' + str(i)
         try: 
+            print(song_id)
+            print(cs)
             wave=AudioSegment.from_mp3(f'cache/{song_id}_dice_{cs}.mp3')
             process=Process(target=play, args=(wave,) )
         except:
@@ -90,4 +109,5 @@ def download_song(song_id, number_of_chunks):
     
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',debug=True,port=5000)
+    app.run(host='0.0.0.0',debug=True,port=8000)
+ 

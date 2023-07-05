@@ -113,8 +113,14 @@
       };
     
     </script>
+    <h1>
 <form action="/on_stop_click" method="post">
         <button style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Parar</button>
       </form>
-</body>
+</h1>
+      <h1>Upload file</h1>
+      <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" id="uploadFile" name="uploadFile" accept=".mp3">
+        <input type="submit">
+      </body>
 </html>
