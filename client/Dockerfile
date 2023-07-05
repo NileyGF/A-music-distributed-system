@@ -8,6 +8,10 @@ RUN pip3 install -r requirements.txt
 
 RUN pip3 install pydub
 RUN pip3 install mutagen
+RUN pip3 install ffmpeg
+RUN pip3 install ffprobe
+RUN apt-get update
+RUN apt-get -y install ffmpeg
 # RUN apt-get update
 # RUN apt-get -y install build-essential
 # #     apt-get install -y python3-tk
@@ -20,4 +24,4 @@ RUN pip3 install flask
 COPY . .
 EXPOSE 5000
 
-CMD python3.11 app2.py
+# CMD python3.11 app.py

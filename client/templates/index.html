@@ -60,25 +60,7 @@
         </form>
     </div>
   <script>
-     $(document).ready(function() {
-  $("form").submit(function(event) {
-    event.preventDefault(); // Prevent the form from submitting normally
-    var selectedSong = $("#songs-select").val();
-    $(this).find("#selectedOption").val(selectedSong);
-    $.ajax({
-      url: "/",
-      type: "POST",
-      data: { selectedOption: selectedSong },
-      success: function(data) {
-        // Update the select box with the received song names
-        $("#song-select").html(data.songs);
-      },
-      error: function() {
-        alert("Error occurred while loading songs.");
-      }
-    });
-  });
-});
+     
 
         const play = document.querySelector('#play');
         const download = document.querySelector('#download');
