@@ -55,16 +55,20 @@
   </select>
   <button id="download" style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Descargar</button>
   <button id="play" style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Reproducir</button>
-  <button id="stop" style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Parar</button>
-        
         </form>
     </div>
+    <script>
+  const selectElement = document.getElementById('songSelect');
+  let selectedOption = '';
+   selectElement.addEventListener('change', (event) => {
+    selectedOption = event.target.value;
+  });
+</script>
   <script>
      
 
         const play = document.querySelector('#play');
         const download = document.querySelector('#download');
-        const stop = document.querySelector('#stop');
         const sb = document.querySelector('#songs-select');
 
         play.onclick = (e) => {
@@ -107,25 +111,10 @@
             // Handle the error
         });
       };
-      stop.onclick = (e) => {
-            e.preventDefault();
-            
-             fetch("/on_stop_click",{
-        "method": "POST",
-        body: JSON.stringify({ selectedValues: selectedValues }),
-        headers: {
-            "Content-Type": "application/json"
-        }
-    })
-        .then(response => response.json())
-        .then(data => {
-            // Handle the success response
-        })
-        .catch(error => {
-            // Handle the error
-        });
-    };
+    
     </script>
-
+<form action="/on_stop_click" method="post">
+        <button style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Parar</button>
+      </form>
 </body>
 </html>
