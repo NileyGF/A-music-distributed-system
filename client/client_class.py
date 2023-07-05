@@ -223,7 +223,8 @@ class Client:
             if ch_saved:
                 return True
         return False
-
+    def upload_song(self,file):
+        pass
 if __name__ == "__main__":
     argList = sys.argv
     if len(argList) > 1:

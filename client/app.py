@@ -3,6 +3,7 @@ from pydub import AudioSegment
 from pydub.playback import play
 import math
 import os
+from flask_bootstrap import Bootstrap
 import client_class
 from multiprocessing import Process
 from flask import jsonify
@@ -12,6 +13,7 @@ IMG_FOLDER=os.path.join('static','IMG')
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER']=IMG_FOLDER
 app.config['UPLOAD_SONG_FOLDER']="uploads"
+Bootstrap(app)
 ALLOWED_EXTENSIONS=set(["mp3"])
 client=client_class.Client()
 process=None 
@@ -28,15 +30,28 @@ def index():
     
     
     return render_template('index.html',user_image=Flask_Logo,songs=songs)
-@app.route('/upload', methods=['POST'])
+@app.route('/upload_song', methods=['GET','POST'])
 def upload():
-    file=request.files["uploadFile"]
-    filename=secure_filename(file.filename)
+    # file=request.files["uploadFile"]
+    # filename=secure_filename(file.filename)
     
-    print(filename)
-    #if file and allowed_file(filename):
-        #client.upload(file)
-    return render_template('index.html',user_image=Flask_Logo,songs=songs)
+    # print(filename)
+    # #if file and allowed_file(filename):
+    #     #client.upload_song(file)
+    # return render_template('index.html',user_image=Flask_Logo,songs=songs)
+    if request.method == 'POST':
+        title = request.form['title']
+        gender = request.form['gender']
+        author = request.form['author']
+        song_file = request.files['songfile']
+
+        #song_key = title + ' ' + author
+
+        #client.upload_song(5, song_key, (title, author, gender, song_file.read()))
+
+        return render_template('index.html',user_image=Flask_Logo,songs=songs)
+    else:
+        return render_template('upload_song.html')
 
 @app.route('/on_download_click', methods=['POST'])
 def on_download_click():

@@ -1,38 +1,23 @@
 <!DOCTYPE html>
-
+{%- extends "base.html" %}
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Player</title>
-    <style>
-  h1 {
-   text-align: center;
-  }
-  .container {
-   display: flex;
-   flex-direction: column;
-   align-items: center;
-  }
-  .button-container {
-   display: flex;
-   justify-content: center;
-   align-items: center;
-  }
-  .button {
-   margin: 0 10px;
-  }
- </style>
 
-</head>
-<body>
-    <h1>Music Player</h1>
-    <h1>
+    {% block title %} DISPOTIFY {% endblock %}
+
+
+{% block content %}
+
+  <div class="text-center">
+    <h1>Music Player
+
     <img src="{{ user_image }}">
+    </h1>
+    <div class="text-center">
     <form action="/on_load_click" method="post">
         <button style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Cargar</button> 
     </form>
-    </h1>
+  </div>
+  </div>
     
    <style>
   .select-box {
@@ -113,14 +98,17 @@
       };
     
     </script>
-    <h1>
+
+    <div class="text-center">
 <form action="/on_stop_click" method="post">
         <button style="border-color: green; color: black; background-color: white; border-radius: 12px; border-width: 2px; height: 40px;">Parar</button>
       </form>
-</h1>
-      <h1>Upload file</h1>
-      <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" id="uploadFile" name="uploadFile" accept=".mp3">
-        <input type="submit">
-      </body>
-</html>
+    </div>
+<h1>
+      <div class="list-group">
+            <a href="/upload_song" class="list-group-item list-group-item-success active">
+                <h4 class="list-group-item-heading">Subir canciones</h4>
+            </a>
+        </div>
+      </h1>
+{% endblock %}
