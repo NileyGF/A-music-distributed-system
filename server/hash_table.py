@@ -154,182 +154,197 @@ class Node:
             return
         request = tuple(['ReqJChord',self.id,core.TAIL])
         encoded = pickle.dumps(request)
-        sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        sock.connect(node_addr)
-        sended, _ = core.send_bytes_to(encoded, sock, False)
-        if sended == 'OK':
-            result = core.receive_data_from(sock)
-            decoded = pickle.loads(result)
-            # Send ACK
-            ack = pickle.dumps(core.ACK_OK_tuple)
-            core.send_bytes_to(ack,sock,False)
-            sock.close()
-            if 'JChordAt' in decoded:
-                self.successor[0] = decoded[1] # (id, address)
-                self.finger_table[0][1] [0] = self.successor[0]
-                print(self.successor)
-                # ask for the keys <= self.id, from successor
-                if self.successor[0][0] != self.id:
-                    self.get_keys_init()
+        try:
+            sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+            sock.connect(node_addr)
+            sended, _ = core.send_bytes_to(encoded, sock, False)
+            if sended == 'OK':
+                result = core.receive_data_from(sock)
+                decoded = pickle.loads(result)
+                # Send ACK
+                ack = pickle.dumps(core.ACK_OK_tuple)
+                core.send_bytes_to(ack,sock,False)
+                sock.close()
+                if 'JChordAt' in decoded:
+                    self.successor[0] = decoded[1] # (id, address)
+                    self.finger_table[0][1] [0] = self.successor[0]
+                    print(self.successor)
+                    # ask for the keys <= self.id, from successor
+                    if self.successor[0][0] != self.id:
+                        self.get_keys_init()
+        except Exception as er:
+            print(er)
         print(core.ANSI_colors['default'])
                 
     def get_keys_init(self):
         """ sends a send_keys request to its successor to recieve 
             all the keys smaller than its id from its successor """
-        request = tuple(['RPcssN',self.id,core.TAIL])
-        encoded = pickle.dumps(request)
-        sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        sock.connect(self.successor[0][1])
-        sended, _ = core.send_bytes_to(encoded, sock, False)
-        if sended == 'OK':
-            result = core.receive_data_from(sock)
-            decoded = pickle.loads(result)
-            # Send ACK
-            ack = pickle.dumps(core.ACK_OK_tuple)
-            core.send_bytes_to(ack,sock,False)
-            sock.close()
-            if 'SPcssN' in decoded:
-                self.predecessor[0] = decoded[1]
+        try:
+            request = tuple(['RPcssN',self.id,core.TAIL])
+            encoded = pickle.dumps(request)
+            sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+            sock.connect(self.successor[0][1])
+            sended, _ = core.send_bytes_to(encoded, sock, False)
+            if sended == 'OK':
+                result = core.receive_data_from(sock)
+                decoded = pickle.loads(result)
+                # Send ACK
+                ack = pickle.dumps(core.ACK_OK_tuple)
+                core.send_bytes_to(ack,sock,False)
+                sock.close()
+                if 'SPcssN' in decoded:
+                    self.predecessor[0] = decoded[1]
 
-                request = tuple(['ReqInit',[self.id,self.predecessor[0][0]],core.TAIL])
-                encoded = pickle.dumps(request)
-                sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-                sock.connect(self.successor[0][1])
-                sended, _ = core.send_bytes_to(encoded, sock, False)
-                if sended == 'OK': 
-                    result = core.receive_data_from(sock)
-                    decoded = pickle.loads(result)
-                    if 'ACK' in decoded:
-                        return True
+                    request = tuple(['ReqInit',[self.id,self.predecessor[0][0]],core.TAIL])
+                    encoded = pickle.dumps(request)
+                    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                    sock.connect(self.successor[0][1])
+                    sended, _ = core.send_bytes_to(encoded, sock, False)
+                    if sended == 'OK': 
+                        result = core.receive_data_from(sock)
+                        decoded = pickle.loads(result)
+                        if 'ACK' in decoded:
+                            return True
+        except Exception as er:
+            print(er)
         return False
 
     def join_request(self, node_id, connection, address):
         """ will return successor for the node who is requesting to join """
         print(core.ANSI_colors['green'])
-        node_successor =  self.find_successor(node_id)
-        response = tuple(['JChordAt',node_successor,core.TAIL])
-        encoded = pickle.dumps(response)
-        state = core.send_bytes_to(encoded,connection,False)
+        try:
+            node_successor =  self.find_successor(node_id)
+            response = tuple(['JChordAt',node_successor,core.TAIL])
+            encoded = pickle.dumps(response)
+            state = core.send_bytes_to(encoded,connection,False)
 
-        if state [0] == "OK":
-            result = core.receive_data_from(connection)
-            decoded = pickle.loads(result)
-            if 'ACK' in decoded:
-                print(core.ANSI_colors['default'])
-                return True     
+            if state [0] == "OK":
+                result = core.receive_data_from(connection)
+                decoded = pickle.loads(result)
+                if 'ACK' in decoded:
+                    print(core.ANSI_colors['default'])
+                    return True     
+        except Exception as er:
+            print(er)
         print(core.ANSI_colors['default'])
         return False
     
     def send_keys_init(self,request_data,connection,address):
         """ send all the keys less than equal to the node_id to the new node that has joined the chord ring """
         print(core.ANSI_colors['green'])
-        node_id = request_data[0]
-        node_pred_id = request_data[1]
-        encoded = pickle.dumps(core.ACK_OK_tuple)
-        state, _ = core.send_bytes_to(encoded,connection,False)
+        try:
+            node_id = request_data[0]
+            node_pred_id = request_data[1]
+            encoded = pickle.dumps(core.ACK_OK_tuple)
+            state, _ = core.send_bytes_to(encoded,connection,False)
 
-        self.songs_tags_list = dbc.get_aviable_songs(self.data_base)
-        to_send = []
-        for s in self.songs_tags_list:
-            id_in_ring = self.hash_song(s)
-            # print(f"song: {s}. hash: {id_in_ring}")
-            if self.get_forward_distance(id_in_ring, node_id) < self.get_forward_distance(id_in_ring, self.id):
-                if self.get_forward_distance(id_in_ring, node_pred_id) > self.get_forward_distance(id_in_ring, node_id):
-                    to_send.append(s)
-                # theorically remove from me that data
+            self.songs_tags_list = dbc.get_aviable_songs(self.data_base)
+            to_send = []
+            for s in self.songs_tags_list:
+                id_in_ring = self.hash_song(s)
+                # print(f"song: {s}. hash: {id_in_ring}")
+                if self.get_forward_distance(id_in_ring, node_id) < self.get_forward_distance(id_in_ring, self.id):
+                    if self.get_forward_distance(id_in_ring, node_pred_id) > self.get_forward_distance(id_in_ring, node_id):
+                        to_send.append(s)
+                    # theorically remove from me that data
+        except Exception as er:
+            print(er)
         
-        # first send all the song tags
-        sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        # print(f"send keys to : {(address[0],core.CHORD_PORT)}")
-        sock.connect((address[0],core.CHORD_PORT))
-        encoded = pickle.dumps(tuple(['SolInit_tags',to_send,core.TAIL]))
-        # print('sending his songs', to_send)
-        state, _ = core.send_bytes_to(encoded,sock,False,verbose=False)
-        if state == 'OK': 
-            result = core.receive_data_from(sock)
-            sock.close()
-            decoded = pickle.loads(result)
-            if not 'ACK' in decoded:
-                print(core.ANSI_colors['default'])
-                return False
-            
-            # then send the corresponding chunks
-            for s in to_send:
-                chunks_rows = dbc.get_chunks_rows_for_song(s[0],self.data_base)
-                # print('len(chunks_row): ',len(chunks_row))
-                for chunk in chunks_rows:
-                    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-                    sock.connect((address[0],core.CHORD_PORT))
-                    encoded = pickle.dumps(tuple(['SChunkRow',chunk,core.TAIL]))
-                    state, _ = core.send_bytes_to(encoded,sock,False,verbose=False)
-                    if state == 'OK': 
-                        result = core.receive_data_from(sock)
+        try:
+            # first send all the song tags
+            sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+            # print(f"send keys to : {(address[0],core.CHORD_PORT)}")
+            sock.connect((address[0],core.CHORD_PORT))
+            encoded = pickle.dumps(tuple(['SolInit_tags',to_send,core.TAIL]))
+            # print('sending his songs', to_send)
+            state, _ = core.send_bytes_to(encoded,sock,False,verbose=False)
+            if state == 'OK': 
+                result = core.receive_data_from(sock)
+                sock.close()
+                decoded = pickle.loads(result)
+                if not 'ACK' in decoded:
+                    print(core.ANSI_colors['default'])
+                    return False
+                    
+                # then send the corresponding chunks
+                for s in to_send:
+                    chunks_rows = dbc.get_chunks_rows_for_song(s[0],self.data_base)
+                    # print('len(chunks_row): ',len(chunks_row))
+                    for chunk in chunks_rows:
+                        sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                        sock.connect((address[0],core.CHORD_PORT))
+                        encoded = pickle.dumps(tuple(['SChunkRow',chunk,core.TAIL]))
+                        state, _ = core.send_bytes_to(encoded,sock,False,verbose=False)
+                        if state == 'OK': 
+                            result = core.receive_data_from(sock)
+                            sock.close()
+                            decoded = pickle.loads(result)
+                            if not 'ACK' in decoded:
+                                print(core.ANSI_colors['default'])
+                                return False
+                            continue
                         sock.close()
-                        decoded = pickle.loads(result)
-                        if not 'ACK' in decoded:
-                            print(core.ANSI_colors['default'])
-                            return False
-                        continue
-                    sock.close()
-                # return False
-            print(core.ANSI_colors['default'])
-            return True
-        sock.close()    
+                    # return False
+                print(core.ANSI_colors['default'])
+                return True
+            sock.close()    
+        except Exception as er:
+            print(er)
+        if sock:
+            sock.close()
         print(core.ANSI_colors['default'])
         return False
     
     def lookup(self, key, connection, address):
         """ Return the node responsible for storing the key """
         print(core.ANSI_colors['green'])
-        key = self.hash(key)
-        resp = self.find_successor(key)
-        response = tuple(['SSResp',resp,core.TAIL])
-        encoded = pickle.dumps(response)
-        state = core.send_bytes_to(encoded,connection,False)
+        try:
+            key = self.hash(key)
+            resp = self.find_successor(key)
+            response = tuple(['SSResp',resp,core.TAIL])
+            encoded = pickle.dumps(response)
+            state = core.send_bytes_to(encoded,connection,False)
 
-        if state [0] == "OK":
-            result = core.receive_data_from(connection)
-            decoded = pickle.loads(result)
-            if 'ACK' in decoded:
-                print(core.ANSI_colors['default'])
+            if state [0] == "OK":
+                result = core.receive_data_from(connection)
+                decoded = pickle.loads(result)
+                if 'ACK' in decoded:
+                    print(core.ANSI_colors['default'])
                 return True     
+        except Exception as er:
+            print(er)
         print(core.ANSI_colors['default'])
         return False
-        # while True:
-        #     if self.prdecessor[0] and self.get_backward_distance(self.id,key) < self.get_backward_distance(self.id,self.predecessor[0][0]):
-        #         # I'm the responsible of key
-        #         return self.ip, self.port
-        #     else:
-        #         for k in range(RING_SIZE):
-        #             if self.get_forward_distance(self.finger_table[k][1][0],key) <= self.get_forward_distance(self.finger_table[k][1][0],self.finger_table[k+1][1][0]):
-        #                 # send lookup to self.finger_table[k+1]
-        #                 return 
-
-        #         # send lookup to self.finger_table[RING_SIZE - 1]
-        #         return 
 
     def add_rows_to_songs(self,rows,connection,address):
+        try:
+            encoded = pickle.dumps(core.ACK_OK_tuple)
+            state, _ = core.send_bytes_to(encoded,connection,False)
 
-        encoded = pickle.dumps(core.ACK_OK_tuple)
-        state, _ = core.send_bytes_to(encoded,connection,False)
-
-        dbc.insert_rows_into_songs(rows,self.data_base)
-        return True
+            dbc.insert_rows_into_songs(rows,self.data_base)
+            return True
+        except Exception as er:
+            print(er)
+            return False
+    
     
     def add_row_to_chunks(self,row,connection,address):
-        
-        encoded = pickle.dumps(core.ACK_OK_tuple)
-        state, _ = core.send_bytes_to(encoded,connection,False)
+        try:
+            encoded = pickle.dumps(core.ACK_OK_tuple)
+            state, _ = core.send_bytes_to(encoded,connection,False)
 
-        s_id = row[2]
-        query = "SELECT * from songs where id_S = "+str(s_id)
-        s_row = dbc.read_data(self.data_base, query)
-        if s_row != None and len(s_row) > 0:
-            # I have the tags of that song
-            # print(f"trying to insert chunk {row[0]}, with length: {len(row[0])}")
-            dbc.insert_rows_into_chunks([row],self.data_base)
-            return True
-        return False
+            s_id = row[2]
+            query = "SELECT * from songs where id_S = "+str(s_id)
+            s_row = dbc.read_data(self.data_base, query)
+            if s_row != None and len(s_row) > 0:
+                # I have the tags of that song
+                # print(f"trying to insert chunk {row[0]}, with length: {len(row[0])}")
+                dbc.insert_rows_into_chunks([row],self.data_base)
+                return True
+            return False
+        except Exception as er:
+            print(er)
+            return False
 
     def solve_successor(self, search_id, connection, address):
         print(core.ANSI_colors['green'])
@@ -396,24 +411,27 @@ class Node:
                 print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
                 return (self.id, (self.ip, self.port))
             
-            # n0.find_successor(search_id)
-            request = tuple(['RPcssN',search_id,core.TAIL])
-            encoded = pickle.dumps(request)
-            sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-            sock.connect(new_node_hop[1])
-            sended, _ = core.send_bytes_to(encoded, sock, False)
-            if sended == 'OK':
-                result = core.receive_data_from(sock)
-                decoded = pickle.loads(result)
-                # Send ACK
-                ack = pickle.dumps(core.ACK_OK_tuple)
-                core.send_bytes_to(ack,sock,False)
-                sock.close()
-                if 'SPcssN' in decoded:
-                    print(core.ANSI_colors['default'])
-                    print(f" Predecessor of {search_id} is {decoded[1]}")
-                    return decoded[1]
-        
+            try:
+                request = tuple(['RPcssN',search_id,core.TAIL])
+                encoded = pickle.dumps(request)
+                sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                sock.connect(new_node_hop[1])
+                sended, _ = core.send_bytes_to(encoded, sock, False)
+                if sended == 'OK':
+                    result = core.receive_data_from(sock)
+                    decoded = pickle.loads(result)
+                    # Send ACK
+                    ack = pickle.dumps(core.ACK_OK_tuple)
+                    core.send_bytes_to(ack,sock,False)
+                    sock.close()
+                    if 'SPcssN' in decoded:
+                        print(core.ANSI_colors['default'])
+                        print(f" Predecessor of {search_id} is {decoded[1]}")
+                        return decoded[1]
+            except Exception as er:
+                print(er)
+                print(core.ANSI_colors['default'])
+                return None
         print(core.ANSI_colors['default'])
 
     def find_successor(self, search_id):
@@ -436,24 +454,27 @@ class Node:
                 return self.successor[0]
             print(f" Successor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
-        
-        request = tuple(['RSccssN',search_id,core.TAIL])
-        encoded = pickle.dumps(request)
-        sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        sock.connect(predecessor[1])
-        sended, _ = core.send_bytes_to(encoded, sock, False)
-        if sended == 'OK':
-            result = core.receive_data_from(sock)
-            decoded = pickle.loads(result)
-            # Send ACK
-            ack = pickle.dumps(core.ACK_OK_tuple)
-            core.send_bytes_to(ack,sock,False)
-            sock.close()
-            if 'SSccssN' in decoded:
-                print(core.ANSI_colors['default'])
-                print(f" Successor of {search_id} is {decoded[1]}")
-                return decoded[1]
-
+        try:
+            request = tuple(['RSccssN',search_id,core.TAIL])
+            encoded = pickle.dumps(request)
+            sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+            sock.connect(predecessor[1])
+            sended, _ = core.send_bytes_to(encoded, sock, False)
+            if sended == 'OK':
+                result = core.receive_data_from(sock)
+                decoded = pickle.loads(result)
+                # Send ACK
+                ack = pickle.dumps(core.ACK_OK_tuple)
+                core.send_bytes_to(ack,sock,False)
+                sock.close()
+                if 'SSccssN' in decoded:
+                    print(core.ANSI_colors['default'])
+                    print(f" Successor of {search_id} is {decoded[1]}")
+                    return decoded[1]
+        except Exception as er:
+            print(er)
+            print(core.ANSI_colors['default'])
+            return None
         print(core.ANSI_colors['default'])
     
     def closest_preceding_node(self, search_id):
@@ -628,21 +649,24 @@ class Node:
         """
         i = 0
         while True:
-
-            # random_index = random.randint(0,RING_SIZE-1)
-            # finger = self.finger_table[random_index][0]
-            finger = self.finger_table[i][0]
-            
-            data = self.find_successor(finger)
-            if data == None:
+            try:
+                # random_index = random.randint(0,RING_SIZE-1)
+                # finger = self.finger_table[random_index][0]
+                finger = self.finger_table[i][0]
+                
+                data = self.find_successor(finger)
+                if data == None:
+                    time.sleep(20)
+                    continue
+                print(f"fix_fingers\t{finger} successor : {data}")
+                self.finger_table[i][1] [0] = data
+                self.print_finger()
+                i = i+1 
+                i = i % RING_SIZE
                 time.sleep(20)
-                continue
-            print(f"fix_fingers\t{finger} successor : {data}")
-            self.finger_table[i][1] [0] = data
-            self.print_finger()
-            i = i+1 
-            i = i % RING_SIZE
-            time.sleep(20)
+            except:
+                time.sleep(20)
+            continue
 
     def check_predecessor(self):
         """periodically checks whether predecessor has failed."""
