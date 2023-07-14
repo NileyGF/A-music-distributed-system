@@ -100,12 +100,7 @@ class Node:
         p.start()
         p = multiprocessing.Process(target=self.fix_fingers)
         p.start()
-        # t = threading.Thread(target = self.stabilize)
-        # t.start()
-        # t = threading.Thread(target = self.fix_fingers)
-        # t.start()
-        # t = threading.Thread(target = self.check_predecessor)
-        # t.start()
+
 
     def __str__(self) -> str:
         return self.ip + ":" + str(self.port)  

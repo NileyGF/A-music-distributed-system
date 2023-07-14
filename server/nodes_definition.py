@@ -58,15 +58,13 @@ class Data_node(Role_node):
         self.chord = hash_table.Node(server_ip,core.CHORD_PORT)
         
         self.headers = {'ping'  :core.send_echo_replay,         # ping -_-  
-                        # 'ReqInit':self.replicate_data,          # Request Initialization Info
-                        # 'SolInit':0,    # Solved Initialization Info
                         'RSList':self.request_songs_list,       # Request Songs List
                         'Rsong' :self.request_song,             # Request song
                         'Rchunk':self.request_chunk,            # Request chunk
                         'RHSong':self.have_song,                # Request Have Song
-                        # 'NSong' :self.add_song,                 # New Song
-                        # 'DSong' :self.remove_song,              # Delete Song
-                        # 'SynData':self.sync_data_center,        # Synchronize Data Center
+                        'NSong' :self.add_song,                 # New Song
+                        'DSong' :self.remove_song,              # Delete Song
+                        'SynData':self.sync_data_center,        # Synchronize Data Center
                         }
         self.headers = dict(list(self.headers.items()) + list(self.chord.headers.items()))
         # print(self.headers)
@@ -217,8 +215,14 @@ class Data_node(Role_node):
                 pass
         return False
 
-    def add_song(self,song_bin:bytes,connection,address):
-        pass
+    def add_song(self,request_data,connection,address):
+        encoded = pickle.dumps(core.ACK_OK_tuple)
+        state, _ = core.send_bytes_to(encoded,connection,False)
+        song_bin = request_data[0]
+        tags = request_data[1]
+        dbc.insert_song_from_bytes(song_bin,tags, self.db_path)
+        # replicate
+        
 
     def remove_song(self,song_id:int,connection,address):
         pass
@@ -301,6 +305,8 @@ class Router_node(Role_node):
                         'RSList':self.send_songs_tags_list,     # Request Songs List
                         'Rsong' :self.send_providers_list,      # Request song
                         'Rchunk':self.send_providers_list,      # Request chunk
+                        'NSong' :self.add_song,                 # New Song
+                        'DSong' :self.send_providers_list,      # Delete Song
                         }
 
         self.providers_by_song = dict()    
@@ -484,11 +490,26 @@ class Router_node(Role_node):
         if state [0] == "OK":
             result = core.receive_data_from(connection)
             decoded = pickle.loads(result)
-            print("Songs Tags Sended ")
             if 'ACK' in decoded:
                 return True
             
         return False
+
+    def add_song(self,request_data,connection,address):
+        addresses = core.get_addr_from_dns('distpotify.data')
+        
+        response = tuple(['SPList',addresses,core.TAIL])
+        encoded = pickle.dumps(response)
+
+        state = core.send_bytes_to(encoded,connection,False)
+        if state [0] == "OK":
+            result = core.receive_data_from(connection)
+            decoded = pickle.loads(result)
+            if 'ACK' in decoded:
+                return True
+            
+        return False
+
 
 class DNS_node(Role_node):
     """DNS server node, with A records. An A record fields are:

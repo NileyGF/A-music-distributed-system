@@ -223,7 +223,13 @@ class Client:
             if ch_saved:
                 return True
         return False
-    def upload_song(self,file):
+    
+    def upload_song(self, file, tags):
+        if len(tags) != 3:
+            print("To upload a song the tags must be a list with 3 elements.")
+            tags = [None,None,None]
+        
+
         pass
 if __name__ == "__main__":
     argList = sys.argv
