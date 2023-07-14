@@ -10,17 +10,27 @@ DNS_addr = ('172.20.0.2', 5353)
 DATA_PORT = 7777
 ROUTER_PORT = 8888
 DNS_PORT = 5353
-NONE_PORT = 6789
 RING_PORT = 8000
+CHORD_PORT = 7000
+NONE_PORT = 6789
 # Messages
 TAIL = '!END!'
 ACK_OK_tuple = tuple(["ACK","OK",TAIL])
 PING_tuple = tuple(['ping',None,TAIL])
 ECHO_REPLAY = tuple(['echoreplay',None,TAIL])
 FAILED_REQ = tuple(['FailedReq',None,TAIL])
+ANSI_colors = {'blue': '\033[94m',
+               'violet': '\033[95m',
+               'cyan': '\033[96m',
+               'green': '\033[92m',
+               'yellow': '\033[93m',
+               'red': '\033[91m',
+               'gray': '\033[90',
+               'default': '\033[0m',
+               }
 
 
-def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: bool = True, attempts: int = 3, time_to_retry_ms: int = 1000, bytes_flow: int = 1500):
+def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: bool = True, attempts: int = 3, time_to_retry_ms: int = 1000, bytes_flow: int = 1500, verbose=True):
     # number of sending attempts while a disconnection error pops up
     if attempts < 0:
         attempts = 3
@@ -41,7 +51,8 @@ def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: 
                 start += sent
                 print("\nSent %d/%d bytes" % (total_sent, len(payload)), connection)
             ok = True
-            print("Sent : ",pickle.loads(payload))
+            if verbose:
+                print("Sent : ",pickle.loads(payload))
             break
         except socket.error as error:
             i += 1
@@ -49,17 +60,17 @@ def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: 
                   " time after resting for ", time_to_retry_ms/1000, "sec.")  # remove
             time.sleep(time_to_retry_ms/1000)  # find a better way
 
-    # If data was sended correctly and waiting for an ACk, receive it and return the proper label and data
+    # If data was sended correctly and waiting for an ACK, receive it and return the proper label and data
     if ok:
         if wait_for_response:
-            response = receive_data_from(connection, bytes_flow, 5000, 3)
+            response = receive_data_from(connection, bytes_flow, 5000, 3,verbose=verbose)
             return "OK", response
         else:
             return "OK", None
     else:
         return "Connection Lost Error!", None
 
-def receive_data_from(connection: socket.socket, bytes_flow: int = 1024, waiting_time_ms: int = 2500, iter_n: int = 5):
+def receive_data_from(connection: socket.socket, bytes_flow: int = 1024, waiting_time_ms: int = 2500, iter_n: int = 5, verbose=True):
     def _receive_handler(queue: multiprocessing.Queue, connection: socket.socket, bytes_flow: int = 1024):
         rd = queue.get()
         msg = connection.recv(bytes_flow)
@@ -93,19 +104,19 @@ def receive_data_from(connection: socket.socket, bytes_flow: int = 1024, waiting
                 if TAIL in decode:
                     break
                 else:
-                    print(decode)
+                    if verbose:
+                        print(decode)
             except:
                 pass
         else:
             i += 1
 
     print('Failed iter: ', i, '. Received data = ', len(data))
-    if len(data) > 0:
-        # try: print(pickle.loads(data))
-        # except: pass
-        pass
-    else:
-        print('\n\t Unresponsive ',connection)
+    if verbose and len(data) > 0:
+        try: print(pickle.loads(data))
+        except: pass
+    # else:
+    #     print('\n\t Unresponsive ',connection)
     return data
 
 def get_addr_from_dns(domain:str):

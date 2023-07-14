@@ -148,7 +148,7 @@ class Server:
             router_nodes = core.get_addr_from_dns('distpotify.router')
             n_data = len(data_nodes)
             n_router = len(router_nodes)
-            if n_data * 1.5 <= n_router:
+            if n_router * 3 < n_data:
                 role = 0
             else: role = 1
             if n_data == 1 and n_router >=1:
@@ -605,7 +605,7 @@ class Server:
                         n_router += 1
 
             print('datas: ',n_data,'routers: ',n_router)
-            if n_data < 2 and n_router > 1:
+            if n_data < 2 and n_router >= 1:
                 request = tuple(["Unbalance","Data_node",core.TAIL])
             elif n_router < 2 and n_data > 2: 
                 request = tuple(["Unbalance","Router_node",core.TAIL])

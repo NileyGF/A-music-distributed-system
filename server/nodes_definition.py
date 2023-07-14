@@ -217,6 +217,7 @@ class Data_node(Role_node):
 
     def add_song(self,request_data,connection,address):
         encoded = pickle.dumps(core.ACK_OK_tuple)
+        # print("send ack to upload song")
         state, _ = core.send_bytes_to(encoded,connection,False)
         song_bin = request_data[0]
         tags = request_data[1]
@@ -385,9 +386,10 @@ class Router_node(Role_node):
 
                     if not self.__already_in_song_list(s,new_song_list):
                         new_song_list.append(s)
-        
-        self.songs_tags_list = new_song_list
-        print(self.songs_tags_list)
+        for s in new_song_list:
+            if not self.__already_in_song_list(s,self.songs_tags_list):
+                self.songs_tags_list.append(s)
+                # print(self.songs_tags_list)
 
         self.songs_tags_list.sort(key=lambda x: x[0])
         # if 'SSList' in decoded:

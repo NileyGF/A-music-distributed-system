@@ -653,9 +653,10 @@ class Node:
                 if data == None:
                     time.sleep(20)
                     continue
-                print(f"fix_fingers\t{finger} successor : {data}")
-                self.finger_table[i][1] [0] = data
-                self.print_finger()
+                if self.finger_table[i][1] [0] != data:
+                    print(f"fix_fingers\t{finger} successor : {data}")
+                    self.finger_table[i][1] [0] = data
+                    self.print_finger()
                 i = i+1 
                 i = i % RING_SIZE
                 time.sleep(20)

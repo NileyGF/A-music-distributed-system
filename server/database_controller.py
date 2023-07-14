@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import shutil
 from pydub import AudioSegment
 from mutagen.mp3 import MP3  
 from mutagen.easyid3 import EasyID3  
@@ -226,8 +227,10 @@ def Insert_songs(songs_list:list,data_base_file_path:str='spotify_db.db'):
     try:
         connection = sqlite3.connect(data_base_file_path)
         cursor = connection.cursor()
-        if cursor.lastrowid:
-            next_id = cursor.lastrowid + 1
+        cursor.execute("SELECT MAX(id_S) FROM songs GROUP BY id_S")
+        result = cursor.fetchall()
+        if result and len(result) > 0:
+            next_id = result[0][0] + 1
         cursor.close()
     except sqlite3.Error as error:
         print(f"Failed to get last rowid in sqlite table {error}")
@@ -245,7 +248,7 @@ def Insert_songs(songs_list:list,data_base_file_path:str='spotify_db.db'):
     tuple_tags = tuple(list_tags)
     # remove the songs that are already in the table
     tuple_tags = not_in_db(data_base_file_path, tuple_tags)
-
+    # print('inserting ',tuple_tags)
     tuple_chunks = split_songs(songs_list,list_tags,True)
     insert_rows(data_base_file_path, 'songs', 'id_S, title, artists, genre, duration_ms, chunk_slice', tuple_tags)
     insert_rows(data_base_file_path, 'chunks', 'id_Chunk, chunk, id_S', tuple_chunks)
@@ -277,6 +280,7 @@ def split_songs(songs_list:list, songs_tags:list, reesplit:bool = True):
                 with open("chunk/"+id_chunk+".mp3", 'rb') as file:
                     chunk = file.read()
                 chunks.append((id_chunk, chunk, id_S))
+                os.remove("chunk/"+id_chunk+".mp3")
     else:
         chunks = []
         chunks_paths = songs_list_from_directory('chunk')
@@ -311,16 +315,18 @@ def not_in_db(data_base_file_path, tuple_tags):
     return tuple(result)
 
 def insert_song_from_bytes(song, tags, data_base_file_path:str='spotify_db.db'):
-    temp_f = 'songs/temp'+ random.randint(1000,9999)
+    temp_f = 'songs/temp'+ str(random.randint(1000,9999)) + '.mp3'
     with open(temp_f,'wb') as f:
         f.write(song)
     auto_tags = get_song_tags(temp_f)
     if tags != None and len(tags) == 3:
         for i,t in enumerate(auto_tags):
-            if 'Unknown' in t and tags[i] != None:
-                auto_tags[i] = tags[i]
+            try:
+                if 'Unknown' in t and tags[i] != None:
+                    auto_tags[i] = tags[i]
+            except: pass
     Insert_songs([temp_f],data_base_file_path)
-    os.remove(temp_f)
+    # os.remove(temp_f)
 
 def insert_rows_into_songs(songs_tags_list:list,data_base_file_path:str='spotify_db.db'):
     tuple_tags = tuple(songs_tags_list)
@@ -386,4 +392,11 @@ def get_chunks_rows_for_song(id_S:int,data_base_file_path:str='spotify_db.db') -
     chunks_row = read_data(data_base_file_path,query)
 
     return chunks_row
+# shutil.rmtree('/home/akeso/Documents/VSCode/A-music-distributed-system/server/chunk')
+# os.listdir('/home/akeso/Documents/VSCode/database_all/03 A Reason to Fight.mp3')
 
+# db = '/home/akeso/Documents/VSCode/A-music-distributed-system/server/data_nodes/spotify_53.db'
+# song_to_add = "/home/akeso/Documents/VSCode/A-music-distributed-system/client/database_all/11 - Lonely Day.mp3"
+# with open(song_to_add,'rb') as f:
+#     song_bytes = f.read()
+# insert_song_from_bytes(song_bytes,[None,None,None],db)

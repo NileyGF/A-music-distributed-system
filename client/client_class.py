@@ -92,7 +92,7 @@ class Client:
         try:
             # receive every chunk
             for i in range(n_chunks):
-                rs_result = core.receive_data_from(client_sock,1500,3000,10)
+                rs_result = core.receive_data_from(client_sock,1500,3000,10,verbose=False)
                 rs_decoded = pickle.loads(rs_result)
                 # Send ACK
                 core.send_bytes_to(ack_encoded,client_sock,False)
@@ -127,7 +127,7 @@ class Client:
             return False
         
         try:            
-            rs_result = core.receive_data_from(client_sock,1500,3000,10)
+            rs_result = core.receive_data_from(client_sock,1500,3000,10,verbose=False)
             rs_decoded = pickle.loads(rs_result)
             # Send ACK
             core.send_bytes_to(ack_encoded,client_sock,False)
@@ -266,10 +266,10 @@ class Client:
 
             request  = tuple(["NSong",[file,tags],core.TAIL])
             encoded = pickle.dumps(request)
-            sended, _ = core.send_bytes_to(encoded, client_sock, False)
-            
+            sended, _ = core.send_bytes_to(encoded, client_sock,wait_for_response=False,verbose=False)
+            print("sended song",sended)
             if sended == "OK":
-                result = core.receive_data_from(client_sock)
+                result = core.receive_data_from(client_sock,1500,10000,20)
                 decoded = pickle.loads(result)
                 if 'ACK' in decoded:
                     return True
@@ -284,7 +284,7 @@ if __name__ == "__main__":
         core.DNS_addr = (argList[1],core.DNS_PORT)
 
     cl = Client()
-    print("---------- Welcome: ----------\nTo see the aviable songs type: 'song list'\nTo request a song type: 'song <id>'",
+    print("---------- Welcome: ----------\nTo see the aviable songs type: 'song list'\nTo add a song to the system: 'add_song <full path(no spaces)>'\nTo request a song type: 'song <id>'",
             "\n where <id> is the number of the desired song. The songs will be saved in /cache.")
     while True:
         print('      ------------------------       ')
@@ -295,7 +295,7 @@ if __name__ == "__main__":
             print(cl.song_list)
         elif "add_song" in order:
             try:
-                song_path = order.split()[1]
+                song_path = order[9:]
                 with open(song_path,'rb') as f:
                     song_bytes = f.read()
                 cl.upload_song(song_bytes,[])
