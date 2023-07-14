@@ -228,9 +228,56 @@ class Client:
         if len(tags) != 3:
             print("To upload a song the tags must be a list with 3 elements.")
             tags = [None,None,None]
+
+        ack = tuple(["ACK","OK",core.TAIL])
+        ack_encoded = pickle.dumps(ack)
+        datas = []
+
+        router_addrsss = self.__get_router_addr()
+        if not router_addrsss:
+            return False
+        
+        for rout in router_addrsss:
+            try: client_sock.close()
+            except: pass
+            client_sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+            client_sock.connect(rout)
+
+            request  = tuple(["NSong",None,core.TAIL])
+            encoded = pickle.dumps(request)
+            sended, _ = core.send_bytes_to(encoded, client_sock, False)
+            if sended != 'OK':
+                client_sock.close()
+                continue
+
+            result = core.receive_data_from(client_sock)
+            
+            decoded = pickle.loads(result)
+            # Send ACK
+            core.send_bytes_to(ack_encoded,client_sock,False)
+            client_sock.close()
+            if 'SPList' in decoded:    
+                datas = decoded[1]
+                break
+        
+        for db in datas:
+            client_sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+            client_sock.connect(db)
+
+            request  = tuple(["NSong",[file,tags],core.TAIL])
+            encoded = pickle.dumps(request)
+            sended, _ = core.send_bytes_to(encoded, client_sock, False)
+            
+            if sended == "OK":
+                result = core.receive_data_from(client_sock)
+                decoded = pickle.loads(result)
+                if 'ACK' in decoded:
+                    return True
+            client_sock.close()
+        return False
+        
         
 
-        pass
 if __name__ == "__main__":
     argList = sys.argv
     if len(argList) > 1:
@@ -246,6 +293,14 @@ if __name__ == "__main__":
             # Request Song List
             cl.refresh_song_list()
             print(cl.song_list)
+        elif "add_song" in order:
+            try:
+                song_path = order.split()[1]
+                with open(song_path,'rb') as f:
+                    song_bytes = f.read()
+                cl.upload_song(song_bytes,[])
+            except Exception as er:
+                print("Error in add_song:",er)
         elif 'song' == order.split()[0]:
             # Request song id-th
             id = int(order.split()[1])
@@ -262,5 +317,5 @@ if __name__ == "__main__":
             cl.request_song(id,number_of_chunks)
         else: 
             print('Wrong request!!')
-            print("\nTo see the aviable songs type: 'song list'\nTo request a song type: 'song <id>'",
+            print("\nTo see the aviable songs type: 'song list'\nTo add a song to the system: 'add_song <full path(no spaces)>'\nTo request a song type: 'song <id>'",
             "\n where <id> is the number of the desired song. The songs will be saved in /cache.\n\n")
