@@ -247,9 +247,9 @@ def Insert_songs(songs_list:list,data_base_file_path:str='spotify_db.db'):
         next_id += 1
     tuple_tags = tuple(list_tags)
     # remove the songs that are already in the table
-    tuple_tags = not_in_db(data_base_file_path, tuple_tags)
-    # print('inserting ',tuple_tags)
-    tuple_chunks = split_songs(songs_list,list_tags,True)
+    tuple_tags,songs_list = not_in_db(data_base_file_path, tuple_tags,songs_list)
+    print('inserting ',tuple_tags)
+    tuple_chunks = split_songs(songs_list,tuple_tags,True)
     insert_rows(data_base_file_path, 'songs', 'id_S, title, artists, genre, duration_ms, chunk_slice', tuple_tags)
     insert_rows(data_base_file_path, 'chunks', 'id_Chunk, chunk, id_S', tuple_chunks)
 
@@ -303,16 +303,19 @@ def songs_list_from_directory(dir_path:str):
             songs_list.append(os.path.join(dir_path, path))
     return songs_list
 
-def not_in_db(data_base_file_path, tuple_tags):
+def not_in_db(data_base_file_path, tuple_tags,songs_list):
     result = []
-    for s in tuple_tags:
+    songs = []
+    for i in range(len(tuple_tags)):
+        s = tuple_tags[i]
         query = f"SELECT * FROM songs WHERE title = '{s[1]}' AND artists = '{s[2]}' "
         s_list = read_data(data_base_file_path, query)
         if s_list != None and len(s_list) > 0:
             print(f"Repeated insertion {s} ignored.")
             continue
         result.append(s)
-    return tuple(result)
+        songs.append(songs_list[i])
+    return tuple(result), songs
 
 def insert_song_from_bytes(song, tags, data_base_file_path:str='spotify_db.db'):
     temp_f = 'songs/temp'+ str(random.randint(1000,9999)) + '.mp3'

@@ -20,7 +20,7 @@ class Client:
         ns_encoded = pickle.dumps(ns_request)
         ns_sended, _ = core.send_bytes_to(ns_encoded, client_sock, False)
         if ns_sended == 'OK':
-            ns_result = core.receive_data_from(client_sock,1500,3000,10)
+            ns_result = core.receive_data_from(client_sock,waiting_time_ms=3000,iter_n=10)
             try:
                 ns_decoded = pickle.loads(ns_result)
                 # Send ACK
@@ -57,7 +57,7 @@ class Client:
                 sl_encoded = pickle.dumps(sl_request)
                 sl_sended, _ = core.send_bytes_to(sl_encoded, client_sock, False)
                 if sl_sended == 'OK':
-                    sl_result = core.receive_data_from(client_sock,1500,3000,10)
+                    sl_result = core.receive_data_from(client_sock,waiting_time_ms=3000,iter_n=10)
                     
                     sl_decoded = pickle.loads(sl_result)
                     # Send ACK
@@ -92,7 +92,7 @@ class Client:
         try:
             # receive every chunk
             for i in range(n_chunks):
-                rs_result = core.receive_data_from(client_sock,1500,3000,10,verbose=False)
+                rs_result = core.receive_data_from(client_sock,waiting_time_ms=3000,iter_n=10,verbose=False)
                 rs_decoded = pickle.loads(rs_result)
                 # Send ACK
                 core.send_bytes_to(ack_encoded,client_sock,False)
@@ -127,7 +127,7 @@ class Client:
             return False
         
         try:            
-            rs_result = core.receive_data_from(client_sock,1500,3000,10,verbose=False)
+            rs_result = core.receive_data_from(client_sock,waiting_time_ms=3000,iter_n=10,verbose=False)
             rs_decoded = pickle.loads(rs_result)
             # Send ACK
             core.send_bytes_to(ack_encoded,client_sock,False)
@@ -168,7 +168,7 @@ class Client:
                 client_sock.close()
                 continue
 
-            rs_result = core.receive_data_from(client_sock,1500,3000,10)
+            rs_result = core.receive_data_from(client_sock,waiting_time_ms=3000,iter_n=10)
             
             rs_decoded = pickle.loads(rs_result)
             # Send ACK
@@ -206,7 +206,7 @@ class Client:
                 client_sock.close()
                 continue
 
-            rs_result = core.receive_data_from(client_sock,1500,3000,10)
+            rs_result = core.receive_data_from(client_sock,waiting_time_ms=3000,iter_n=10)
             
             rs_decoded = pickle.loads(rs_result)
             # Send ACK
@@ -269,7 +269,7 @@ class Client:
             sended, _ = core.send_bytes_to(encoded, client_sock,wait_for_response=False,verbose=False)
             print("sended song",sended)
             if sended == "OK":
-                result = core.receive_data_from(client_sock,1500,10000,20)
+                result = core.receive_data_from(client_sock,waiting_time_ms=10000,iter_n=20)
                 decoded = pickle.loads(result)
                 if 'ACK' in decoded:
                     return True
