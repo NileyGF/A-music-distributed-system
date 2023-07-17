@@ -10,6 +10,8 @@ RUN pip3 install pydub
 RUN pip3 install mutagen
 RUN pip3 install ffmpeg
 
+RUN apt-get update
+RUN apt-get -y install ffmpeg
 COPY . .
 
 ARG TYPE_SERVER

@@ -45,9 +45,7 @@ def upload():
         author = request.form['author']
         song_file = request.files['songfile']
 
-        #song_key = title + ' ' + author
-
-        #client.upload_song(5, song_key, (title, author, gender, song_file.read()))
+        client.upload_song(song_file.read(),[title,author,gender])
 
         return render_template('index.html',user_image=Flask_Logo,songs=songs)
     else:
@@ -124,5 +122,5 @@ def download_song(song_id, number_of_chunks):
     
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',debug=True,port=8000)
+    app.run(host='0.0.0.0',debug=True,port=5000)
  
