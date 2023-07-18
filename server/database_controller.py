@@ -227,9 +227,10 @@ def Insert_songs(songs_list:list,data_base_file_path:str='spotify_db.db'):
     try:
         connection = sqlite3.connect(data_base_file_path)
         cursor = connection.cursor()
-        cursor.execute("SELECT MAX(id_S) FROM songs GROUP BY id_S")
+        cursor.execute("SELECT * FROM songs ORDER BY id_S DESC LIMIT 1")
         result = cursor.fetchall()
-        if result and len(result) > 0:
+        if result != None and len(result) > 0:
+            print('last rowid',result)
             next_id = result[0][0] + 1
         cursor.close()
     except sqlite3.Error as error:
@@ -308,7 +309,7 @@ def not_in_db(data_base_file_path, tuple_tags,songs_list):
     songs = []
     for i in range(len(tuple_tags)):
         s = tuple_tags[i]
-        query = f"SELECT * FROM songs WHERE title = '{s[1]}' AND artists = '{s[2]}' "
+        query = f"SELECT * FROM songs WHERE title = \"{s[1]}\" AND artists = \"{s[2]}\" "
         s_list = read_data(data_base_file_path, query)
         if s_list != None and len(s_list) > 0:
             print(f"Repeated insertion {s} ignored.")
