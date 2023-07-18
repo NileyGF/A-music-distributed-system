@@ -92,11 +92,12 @@ class Client:
         try:
             # receive every chunk
             for i in range(n_chunks):
+                print("waiting for chunk", i)
                 rs_result = core.receive_data_from(client_sock,waiting_time_ms=3000,iter_n=10,verbose=False)
                 rs_decoded = pickle.loads(rs_result)
                 # Send ACK
                 core.send_bytes_to(ack_encoded,client_sock,False)
-
+                print("received chunk", i)
                 if 'Schunk' in rs_decoded:
                     if i < 10:
                         cs = '00'+ str(i)

@@ -245,12 +245,25 @@ class Node:
         except Exception as er:
             print(er)
         
+        its_keys = self.send_songs_and_chunks(to_send,address)
+        print(f"Data sended to node {node_id}. Sending now my data for replication")
+        to_replicate = []
+        for s in self.songs_tags_list:
+            id_in_ring = self.hash_song(s)
+            print(f"song: {s}. hash: {id_in_ring}")
+            if self.get_forward_distance(id_in_ring, self.id) < self.get_forward_distance(id_in_ring, node_id):
+                print("\t my key, send to replicate")
+                to_replicate.append(s)
+        my_keys = self.send_songs_and_chunks(to_replicate, address)
+        return its_keys or my_keys
+    
+    def send_songs_and_chunks(self, tags_to_send, address):
         try:
             # first send all the song tags
             sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
             # print(f"send keys to : {(address[0],core.CHORD_PORT)}")
             sock.connect((address[0],core.CHORD_PORT))
-            encoded = pickle.dumps(tuple(['SolInit_tags',to_send,core.TAIL]))
+            encoded = pickle.dumps(tuple(['SolInit_tags',tags_to_send,core.TAIL]))
             # print('sending his songs', to_send)
             state, _ = core.send_bytes_to(encoded,sock,False,verbose=False)
             if state == 'OK': 
@@ -262,7 +275,7 @@ class Node:
                     return False
                     
                 # then send the corresponding chunks
-                for s in to_send:
+                for s in tags_to_send:
                     chunks_rows = dbc.get_chunks_rows_for_song(s[0],self.data_base)
                     # print('len(chunks_row): ',len(chunks_row))
                     for chunk in chunks_rows:
@@ -279,7 +292,6 @@ class Node:
                                 return False
                             continue
                         sock.close()
-                    # return False
                 print(core.ANSI_colors['default'])
                 return True
             sock.close()    
@@ -321,7 +333,6 @@ class Node:
         except Exception as er:
             print(er)
             return False
-    
     
     def add_row_to_chunks(self,row,connection,address):
         try:

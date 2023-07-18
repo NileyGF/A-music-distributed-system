@@ -6,7 +6,7 @@ import errors
 
 # Addresses
 DNS_addr = ('172.20.0.2', 5353)
-bytes_mult = 16
+bytes_mult = 8
 
 DATA_PORT = 7777
 ROUTER_PORT = 8888

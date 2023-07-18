@@ -17,6 +17,7 @@ Bootstrap(app)
 ALLOWED_EXTENSIONS=set(["mp3"])
 client=client_class.Client()
 process=None 
+stop=False
 def allowed_file(file):
     file=file.split('.')
     if file[1] in ALLOWED_EXTENSIONS:
@@ -76,6 +77,8 @@ def on_play_click():
 @app.route('/on_stop_click', methods=['POST'])
 def on_stop_click():
     global process
+    global stop
+    stop = True
     if process is not None:
         process.terminate()
     return render_template('index.html',user_image=Flask_Logo,songs=songs)
@@ -94,6 +97,8 @@ def on_load_click():
         
 def play_song(song_id, number_of_chunks):
     global process
+    global stop
+    stop = False
     for i in range(number_of_chunks):
         if i < 10:
             cs = '00'+ str(i)
@@ -108,7 +113,11 @@ def play_song(song_id, number_of_chunks):
             chunk = client.request_song_from(song_id, i*10*1000,number_of_chunks)
             wave=AudioSegment.from_mp3(f'cache/{song_id}_dice_{cs}.mp3')
             process=Process(target=play, args=(wave,) )
+            
+        if stop:
+            return
         process.start()
+        process.join()
     
 def download_song(song_id, number_of_chunks):
     for i in range(number_of_chunks):
