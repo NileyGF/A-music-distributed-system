@@ -87,6 +87,7 @@ def on_load_click():
     client.refresh_song_list()
     song_list = client.song_list
     print(song_list)
+    songs=[]
     for i, sl in enumerate(song_list):
         songs.insert(i,sl)
     return render_template('index.html',user_image=Flask_Logo,songs=songs)
