@@ -93,7 +93,7 @@ class Client:
             # receive every chunk
             for i in range(n_chunks):
                 print("waiting for chunk", i)
-                rs_result = core.receive_data_from(client_sock,waiting_time_ms=3000,iter_n=10,verbose=False)
+                rs_result = core.receive_data_from(client_sock,waiting_time_ms=3000,iter_n=10,verbose=0)
                 rs_decoded = pickle.loads(rs_result)
                 # Send ACK
                 core.send_bytes_to(ack_encoded,client_sock,False)
@@ -128,7 +128,7 @@ class Client:
             return False
         
         try:            
-            rs_result = core.receive_data_from(client_sock,waiting_time_ms=3000,iter_n=10,verbose=False)
+            rs_result = core.receive_data_from(client_sock,waiting_time_ms=3000,iter_n=10,verbose=0)
             rs_decoded = pickle.loads(rs_result)
             # Send ACK
             core.send_bytes_to(ack_encoded,client_sock,False)
@@ -251,7 +251,7 @@ class Client:
                 client_sock.close()
                 continue
 
-            result = core.receive_data_from(client_sock)
+            result = core.receive_data_from(client_sock,verbose=2)
             
             decoded = pickle.loads(result)
             # Send ACK
@@ -267,7 +267,7 @@ class Client:
 
             request  = tuple(["NSong",[file,tags],core.TAIL])
             encoded = pickle.dumps(request)
-            sended, _ = core.send_bytes_to(encoded, client_sock,wait_for_response=False,verbose=False)
+            sended, _ = core.send_bytes_to(encoded, client_sock,wait_for_response=False,verbose=1)
             print("sended song",sended)
             if sended == "OK":
                 result = core.receive_data_from(client_sock,waiting_time_ms=10000,iter_n=20)

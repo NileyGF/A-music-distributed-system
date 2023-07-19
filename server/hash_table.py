@@ -140,12 +140,12 @@ class Node:
         incoming node in the ring and then it sends a send_keys request to 
         its successor to recieve all the keys smaller than its id from its successor.
         """
-        print(core.ANSI_colors['cyan'])
+        # print(core.ANSI_colors['cyan'])
         if node_addr[0] == self.ip and node_addr[1] == self.port:
             self.successor[0] = (self.id, (self.ip, self.port))
             self.finger_table[0][1] [0] = self.successor[0]
             # self.predecessor = [None, None]
-            print(core.ANSI_colors['default'])
+            # print(core.ANSI_colors['default'])
             return
         request = tuple(['ReqJChord',self.id,core.TAIL])
         encoded = pickle.dumps(request)
@@ -163,13 +163,13 @@ class Node:
                 if 'JChordAt' in decoded:
                     self.successor[0] = decoded[1] # (id, address)
                     self.finger_table[0][1] [0] = self.successor[0]
-                    print(self.successor)
+                    # print(self.successor)
                     # ask for the keys <= self.id, from successor
                     if self.successor[0][0] != self.id:
                         self.get_keys_init()
         except Exception as er:
-            print(er)
-        print(core.ANSI_colors['default'])
+            print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
+        # print(core.ANSI_colors['default'])
                 
     def get_keys_init(self):
         """ sends a send_keys request to its successor to recieve 
@@ -201,12 +201,12 @@ class Node:
                         if 'ACK' in decoded:
                             return True
         except Exception as er:
-            print(er)
+            print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
         return False
 
     def join_request(self, node_id, connection, address):
         """ will return successor for the node who is requesting to join """
-        print(core.ANSI_colors['green'])
+        # print(core.ANSI_colors['green'])
         try:
             node_successor =  self.find_successor(node_id)
             response = tuple(['JChordAt',node_successor,core.TAIL])
@@ -220,13 +220,13 @@ class Node:
                     print(core.ANSI_colors['default'])
                     return True     
         except Exception as er:
-            print(er)
-        print(core.ANSI_colors['default'])
+            print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
+        # print(core.ANSI_colors['default'])
         return False
     
     def send_keys_init(self,request_data,connection,address):
         """ send all the keys less than equal to the node_id to the new node that has joined the chord ring """
-        print(core.ANSI_colors['green'])
+        # print(core.ANSI_colors['green'])
         try:
             node_id = request_data[0]
             node_pred_id = request_data[1]
@@ -237,22 +237,22 @@ class Node:
             to_send = []
             for s in self.songs_tags_list:
                 id_in_ring = self.hash_song(s)
-                # print(f"song: {s}. hash: {id_in_ring}")
                 if self.get_forward_distance(id_in_ring, node_id) < self.get_forward_distance(id_in_ring, self.id):
                     if self.get_forward_distance(id_in_ring, node_pred_id) > self.get_forward_distance(id_in_ring, node_id):
+                        print(core.ANSI_colors['green'], f"song: {s}. hash: {id_in_ring}", )
                         to_send.append(s)
                     # theorically remove from me that data
         except Exception as er:
-            print(er)
+            print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
         
         its_keys = self.send_songs_and_chunks(to_send,address)
-        print(f"Data sended to node {node_id}. Sending now my data for replication")
+        print(core.ANSI_colors['green'], f"Data sended to node {node_id}. Sending now my data for replication",core.ANSI_colors['default'])
         to_replicate = []
         for s in self.songs_tags_list:
             id_in_ring = self.hash_song(s)
-            print(f"song: {s}. hash: {id_in_ring}")
+            print(core.ANSI_colors['green'], f"song: {s}. hash: {id_in_ring}",core.ANSI_colors['default'])
             if self.get_forward_distance(id_in_ring, self.id) < self.get_forward_distance(id_in_ring, node_id):
-                print("\t my key, send to replicate")
+                print(core.ANSI_colors['green'], "\t my key, send to replicate",core.ANSI_colors['default'])
                 to_replicate.append(s)
         my_keys = self.send_songs_and_chunks(to_replicate, address)
         return its_keys or my_keys
@@ -261,50 +261,51 @@ class Node:
         try:
             # first send all the song tags
             sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-            # print(f"send keys to : {(address[0],core.CHORD_PORT)}")
+            print(f"sending songs to : {(address[0],core.CHORD_PORT)}")
             sock.connect((address[0],core.CHORD_PORT))
             encoded = pickle.dumps(tuple(['SolInit_tags',tags_to_send,core.TAIL]))
-            # print('sending his songs', to_send)
-            state, _ = core.send_bytes_to(encoded,sock,False,verbose=False)
+            print('sending', tags_to_send)
+            state, _ = core.send_bytes_to(encoded,sock,False,verbose=2)
             if state == 'OK': 
-                result = core.receive_data_from(sock)
+                result = core.receive_data_from(sock,waiting_time_ms=5000)
                 sock.close()
                 decoded = pickle.loads(result)
                 if not 'ACK' in decoded:
-                    print(core.ANSI_colors['default'])
+                    # print(core.ANSI_colors['default'])
                     return False
                     
                 # then send the corresponding chunks
                 for s in tags_to_send:
                     chunks_rows = dbc.get_chunks_rows_for_song(s[0],self.data_base)
-                    # print('len(chunks_row): ',len(chunks_row))
+                    print('len(chunks_row): ',len(chunks_rows))
                     for chunk in chunks_rows:
                         sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
                         sock.connect((address[0],core.CHORD_PORT))
+
                         encoded = pickle.dumps(tuple(['SChunkRow',chunk,core.TAIL]))
-                        state, _ = core.send_bytes_to(encoded,sock,False,verbose=False)
+                        state, _ = core.send_bytes_to(encoded,sock,False,verbose=0)
                         if state == 'OK': 
                             result = core.receive_data_from(sock)
                             sock.close()
                             decoded = pickle.loads(result)
                             if not 'ACK' in decoded:
-                                print(core.ANSI_colors['default'])
+                                # print(core.ANSI_colors['default'])
                                 return False
                             continue
                         sock.close()
-                print(core.ANSI_colors['default'])
+                # print(core.ANSI_colors['default'])
                 return True
             sock.close()    
         except Exception as er:
-            print(er)
+            print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
         if sock:
             sock.close()
-        print(core.ANSI_colors['default'])
+        # print(core.ANSI_colors['default'])
         return False
     
     def lookup(self, key, connection, address):
         """ Return the node responsible for storing the key """
-        print(core.ANSI_colors['green'])
+        # print(core.ANSI_colors['green'])
         try:
             key = self.hash(key)
             resp = self.find_successor(key)
@@ -316,11 +317,11 @@ class Node:
                 result = core.receive_data_from(connection)
                 decoded = pickle.loads(result)
                 if 'ACK' in decoded:
-                    print(core.ANSI_colors['default'])
-                return True     
+                    # print(core.ANSI_colors['default'])
+                    return True     
         except Exception as er:
-            print(er)
-        print(core.ANSI_colors['default'])
+            print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
+        # print(core.ANSI_colors['default'])
         return False
 
     def add_rows_to_songs(self,rows,connection,address):
@@ -331,7 +332,7 @@ class Node:
             dbc.insert_rows_into_songs(rows,self.data_base)
             return True
         except Exception as er:
-            print(er)
+            print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
             return False
     
     def add_row_to_chunks(self,row,connection,address):
@@ -349,11 +350,11 @@ class Node:
                 return True
             return False
         except Exception as er:
-            print(er)
+            print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
             return False
 
     def solve_successor(self, search_id, connection, address):
-        print(core.ANSI_colors['green'])
+        # print(core.ANSI_colors['green'])
         node_successor = self.find_successor(search_id)
         response = tuple(['SSccssN',node_successor,core.TAIL])
         encoded = pickle.dumps(response)
@@ -363,13 +364,13 @@ class Node:
             result = core.receive_data_from(connection)
             decoded = pickle.loads(result)
             if 'ACK' in decoded:
-                print(core.ANSI_colors['default'])
+                # print(core.ANSI_colors['default'])
                 return True     
-        print(core.ANSI_colors['default'])
+        # print(core.ANSI_colors['default'])
         return False
 
     def solve_predecessor(self, search_id, connection, address):
-        print(core.ANSI_colors['green'])
+        # print(core.ANSI_colors['green'])
         node_predecessor = self.find_predecessor(search_id)
         response = tuple(['SPcssN',node_predecessor,core.TAIL])
         encoded = pickle.dumps(response)
@@ -379,25 +380,25 @@ class Node:
             result = core.receive_data_from(connection)
             decoded = pickle.loads(result)
             if 'ACK' in decoded:
-                print(core.ANSI_colors['default'])
+                # print(core.ANSI_colors['default'])
                 return True     
-        print(core.ANSI_colors['default'])
+        # print(core.ANSI_colors['default'])
         return False
 
     def find_predecessor(self, search_id):
         """ Provides the predecessor of any value in the ring given its id."""
         if search_id == self.id:
-            print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
+            # print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
         if self.predecessor[0] is not None and  self.successor[0][0] == self.id:
-            print(f" ---- Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
+            # print(f" ---- Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
-        print(core.ANSI_colors['cyan'])
+        # print(core.ANSI_colors['cyan'])
         if self.predecessor[0] is not None and self.get_forward_distance(self.id, self.successor[0][0]) > self.get_forward_distance(self.id, search_id):
-            print(core.ANSI_colors['default'])
-            print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
+            # print(core.ANSI_colors['default'])
+            # print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
         else:
@@ -407,14 +408,14 @@ class Node:
             new_node_hop = self.closest_preceding_node(search_id)
             # print(f"new_node_hop {new_node_hop}")
             if new_node_hop is None:
-                print(core.ANSI_colors['default'])
-                print(f" Predecessor of {search_id} is {None}")
+                # print(core.ANSI_colors['default'])
+                # print(f" Predecessor of {search_id} is {None}")
                 return None
             ip, port = new_node_hop [1]
             if ip == self.ip and port == self.port:
-                print(core.ANSI_colors['default'])
+                # print(core.ANSI_colors['default'])
                 # print(f" I'm predecessor")
-                print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
+                # print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
                 return (self.id, (self.ip, self.port))
             
             try:
@@ -431,34 +432,34 @@ class Node:
                     core.send_bytes_to(ack,sock,False)
                     sock.close()
                     if 'SPcssN' in decoded:
-                        print(core.ANSI_colors['default'])
-                        print(f" Predecessor of {search_id} is {decoded[1]}")
+                        # print(core.ANSI_colors['default'])
+                        # print(f" Predecessor of {search_id} is {decoded[1]}")
                         return decoded[1]
             except Exception as er:
-                print(er)
-                print(core.ANSI_colors['default'])
+                # print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
+                # print(core.ANSI_colors['default'])
                 return None
-        print(core.ANSI_colors['default'])
+        # print(core.ANSI_colors['default'])
 
     def find_successor(self, search_id):
         """ Provides the successor of any value in the ring given its id."""
         if(search_id == self.id):
-            print(f" Successor of {search_id} is {(self.id, (self.ip, self.port))}")
+            # print(f" Successor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
-        print(core.ANSI_colors['cyan'])
+        # print(core.ANSI_colors['cyan'])
         predecessor = self.find_predecessor(search_id)
    
         if predecessor == None:
-            print(core.ANSI_colors['default'])
-            print(f" Successor of {search_id} is {None}")
+            # print(core.ANSI_colors['default'])
+            # print(f" Successor of {search_id} is {None}")
             return None
         if predecessor[0] == self.id:
-            print(core.ANSI_colors['default'])
+            # print(core.ANSI_colors['default'])
             if self.successor[0]:
-                print(f" Successor of {search_id} is {self.successor[0]}")
+                # print(f" Successor of {search_id} is {self.successor[0]}")
                 return self.successor[0]
-            print(f" Successor of {search_id} is {(self.id, (self.ip, self.port))}")
+            # print(f" Successor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         try:
             request = tuple(['RSccssN',search_id,core.TAIL])
@@ -474,14 +475,14 @@ class Node:
                 core.send_bytes_to(ack,sock,False)
                 sock.close()
                 if 'SSccssN' in decoded:
-                    print(core.ANSI_colors['default'])
-                    print(f" Successor of {search_id} is {decoded[1]}")
+                    # print(core.ANSI_colors['default'])
+                    # print(f" Successor of {search_id} is {decoded[1]}")
                     return decoded[1]
         except Exception as er:
-            print(er)
-            print(core.ANSI_colors['default'])
+            # print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
+            # print(core.ANSI_colors['default'])
             return None
-        print(core.ANSI_colors['default'])
+        # print(core.ANSI_colors['default'])
     
     def closest_preceding_node(self, search_id):
         """search the finger table for the highest predecessor of search_id"""
@@ -493,7 +494,7 @@ class Node:
                 closest_node = self.finger_table[i][1][0]
                 min_distance = self.get_forward_distance(self.finger_table[i][0],search_id)
                 # print("Min distance",min_distance)
-        print(f" Closest preceding node of {search_id} is {(self.id, (self.ip, self.port))}")
+        # print(f" Closest preceding node of {search_id} is {(self.id, (self.ip, self.port))}")
         return closest_node
 
     def stabilize(self):
@@ -504,18 +505,18 @@ class Node:
         """
         while True:
             if self.successor[0] is None:
-                time.sleep(20)
-                print(core.ANSI_colors['red'], " No successor" , core.ANSI_colors['default'])
+                time.sleep(40)
+                print(core.ANSI_colors['cyan'], " No successor" , core.ANSI_colors['default'])
                 continue
 
             if self.successor[0][1][0] == self.ip  and self.successor[0][1][1] == self.port:
-                time.sleep(20)
-                print(core.ANSI_colors['red'], " I'm my successor", core.ANSI_colors['default'])
+                time.sleep(40)
+                print(core.ANSI_colors['cyan'], " I'm my successor", core.ANSI_colors['default'])
                 continue
             
             # get successor.predecesor
             try:
-                print(core.ANSI_colors['red'])
+                # print(core.ANSI_colors['red'])
                 request = tuple(['RPcssN',self.successor[0][0],core.TAIL])
                 encoded = pickle.dumps(request)
                 sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
@@ -541,7 +542,7 @@ class Node:
                                 decoded_ack = pickle.loads(result)
                                 sock.close()
                                 if 'ACK' in decoded_ack:
-                                    print(core.ANSI_colors['default'])  
+                                    # print(core.ANSI_colors['default'])  
                                     continue
                         else:
                             succ_pred = decoded[1]
@@ -563,10 +564,11 @@ class Node:
                     decoded_ack = pickle.loads(result)
                     sock.close()
             except Exception as er:
-                print(er)
-
+                print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
+                self.successor[0] = (self.id, (self.ip,self.port))
+            print(core.ANSI_colors['cyan'])
             print("===============================================")
-            print("STABILIZING")
+            print("                 STABILIZING                 ")
             print("===============================================")
             print("ID: ", self.id)
             if self.successor[0] is not None:
@@ -576,20 +578,15 @@ class Node:
             print("===============================================")
             print("=============== FINGER TABLE ==================")
             self.print_finger()
-            # print("===============================================")
-            # print("DATA STORE")
-            # print("===============================================")
-            # print(str(self.data_store.data))
-            print("===============================================")
-            print("++++++++++++++++++++ END ++++++++++++++++++++++",core.ANSI_colors['default'])
-            time.sleep(20)
+            print("===============================================",core.ANSI_colors['default'])
+            time.sleep(40)
 
     def notify(self, node_info, connection, address):
         """
         Recevies notification from stabilized function when there is change in successor,
         node thinks it might be our predecessor.
         """
-        print(core.ANSI_colors['red'])
+        # print(core.ANSI_colors['red'])
         encoded = pickle.dumps(core.ACK_OK_tuple)
         state, _ = core.send_bytes_to(encoded,connection,False)
 
@@ -597,30 +594,28 @@ class Node:
         
         if self.predecessor[0] is not None:
             if self.get_backward_distance(self.id,node_id) < self.get_backward_distance(self.id,self.predecessor[0][0]):
-                print("changing my predecessor", node_id)
+                print(core.ANSI_colors['cyan'],"changing my predecessor", node_id, core.ANSI_colors['default'])
                 self.predecessor[0] = node_info
-                print(core.ANSI_colors['default'])
                 return
         
         if self.predecessor[0] is None \
         or ( node_id > self.predecessor[0][0] and node_id < self.id ) \
         or ( self.id == self.predecessor[0][0] and node_id != self.id) :
-            print("changing my predecessor", node_id)
+            print(core.ANSI_colors['cyan'],"changing my predecessor", node_id, core.ANSI_colors['default'])
             self.predecessor[0] = node_info
 
             # special case???
             if self.id == self.successor[0][0]:
-                # print("changing my succ", node_id)
                 self.successor[0] = node_info
                 self.finger_table[0][1] [0] = self.successor[0]
-        print(core.ANSI_colors['default'])
+        # print(core.ANSI_colors['default'])
     
     def notify_pred(self, node_info, connection, address):
         """
         Recevies notification from stabilized function when there is change in successor,
         node thinks it might be our predecessor.
         """
-        print(core.ANSI_colors['red'])
+        # print(core.ANSI_colors['red'])
         encoded = pickle.dumps(core.ACK_OK_tuple)
         state, _ = core.send_bytes_to(encoded,connection,False)
 
@@ -628,16 +623,16 @@ class Node:
         
         if self.successor[0] is not None:
             if self.get_forward_distance(self.id,node_id) < self.get_forward_distance(self.id,self.successor[0][0]):
-                print("changing my successor", node_id)
+                print(core.ANSI_colors['cyan'],"changing my successor", node_id, core.ANSI_colors['default'])
                 self.successor[0] = node_info
                 self.finger_table[0][1] [0] = self.successor[0]
-                print(core.ANSI_colors['default'])
+                # print(core.ANSI_colors['default'])
                 return
         
         if self.successor[0] is None \
         or ( node_id < self.successor[0][0] and node_id > self.id ) \
         or ( self.id == self.successor[0][0] and node_id != self.id) :
-            print("changing my successor", node_id)
+            print(core.ANSI_colors['cyan'],"changing my successor", node_id, core.ANSI_colors['default'])
             self.successor[0] = node_info
             self.finger_table[0][1] [0] = self.successor[0]
 
@@ -645,7 +640,7 @@ class Node:
             if self.id == self.successor[0][0]:
                 # print("changing my succ", node_id)
                 self.predecessor[0] = node_info
-        print(core.ANSI_colors['default'])
+        # print(core.ANSI_colors['default'])
     
     def fix_fingers(self):
         """
@@ -665,14 +660,14 @@ class Node:
                     time.sleep(20)
                     continue
                 if self.finger_table[i][1] [0] != data:
-                    print(f"fix_fingers\t{finger} successor : {data}")
+                    print(core.ANSI_colors['cyan'],f"fix_fingers\t{finger} successor : {data}",core.ANSI_colors['default'],)
                     self.finger_table[i][1] [0] = data
                     self.print_finger()
                 i = i+1 
                 i = i % RING_SIZE
-                time.sleep(20)
+                time.sleep(35)
             except:
-                time.sleep(20)
+                time.sleep(35)
             continue
 
     def check_predecessor(self):
@@ -680,22 +675,26 @@ class Node:
         while True:
             if self.predecessor[0] is not None:
                 if self.predecessor[0][0] != self.id:
-                    request = tuple(['NotifyP',(self.id, (self.ip, self.port)),core.TAIL])
-                    encoded = pickle.dumps(request)
-                    sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-                    sock.connect(self.predecessor[0][1])
-                    sended, _ = core.send_bytes_to(encoded, sock, False,verbose=False)
-                    if sended == 'OK':
-                        result = core.receive_data_from(sock,verbose=False)
-                        decoded_ack = pickle.loads(result)
-                        sock.close()
-                        if 'ACK' in decoded_ack:
-                            print(core.ANSI_colors['cyan'] + "Chord predecessor OK!" + core.ANSI_colors['default'])
-                            time.sleep(20)
-                            continue
-                    self.predecessor[0] = None
-                print(core.ANSI_colors['cyan'] + "Chord predecessor OK!" + core.ANSI_colors['default'])
-            time.sleep(20)
+                    try:
+                        request = tuple(['NotifyP',(self.id, (self.ip, self.port)),core.TAIL])
+                        encoded = pickle.dumps(request)
+                        sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+                        sock.connect(self.predecessor[0][1])
+                        sended, _ = core.send_bytes_to(encoded, sock, False,verbose=0)
+                        if sended == 'OK':
+                            result = core.receive_data_from(sock,verbose=0)
+                            decoded_ack = pickle.loads(result)
+                            sock.close()
+                            if 'ACK' in decoded_ack:
+                                print(core.ANSI_colors['cyan'] + "Chord predecessor OK!" + core.ANSI_colors['default'])
+                                time.sleep(40)
+                                continue
+                        self.predecessor[0] = None
+                    except Exception as er:
+                        print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
+                        self.predecessor[0] = None
+                
+            time.sleep(40)
 
     def get_backward_distance(self, node2, node1):
         
@@ -715,14 +714,3 @@ class Node:
     def print_finger(self):
         for finger in self.finger_table:
             print(f"{finger[0]} , {finger[1][0]}")
-
-# d1 = Node('172.20.0.5',7777)
-# d2 = Node('172.20.0.7',7777)
-# d3 = Node('172.20.0.6',7777)
-
-# print(d1.hash())
-# print(d2.hash())
-# print(d3.hash())
-# chunks_row = dbc.get_chunks_rows_for_song(11,'server/data_nodes/spotify_1.db')
-# print(len(chunks_row))
-# print(chunks_row[0])

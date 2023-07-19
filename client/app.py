@@ -105,8 +105,8 @@ def play_song(song_id, number_of_chunks):
         elif i < 100:
             cs = '0' + str(i)
         try: 
-            print(song_id)
-            print(cs)
+            print("song ", song_id)
+            print("chunk ", cs)
             wave=AudioSegment.from_mp3(f'cache/{song_id}_dice_{cs}.mp3')
             process=Process(target=play, args=(wave,) )
         except:

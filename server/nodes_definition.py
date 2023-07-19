@@ -138,8 +138,8 @@ class Data_node(Role_node):
                     p.join()
     
     def chord_connection(self,connection:socket,address):
-        print(core.ANSI_colors['green'])
-        received = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=5,verbose=False)
+        # print(core.ANSI_colors['green'])
+        received = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=5,verbose=0)
 
         try:
             decoded = pickle.loads(received)
@@ -162,7 +162,7 @@ class Data_node(Role_node):
             core.send_bytes_to(encoded,connection,False)
                  
         finally:
-            print(core.ANSI_colors['default'])
+            # print(core.ANSI_colors['default'])
             connection.close()
         
     def have_song(self,song_id:int,connection,address):
@@ -209,7 +209,7 @@ class Data_node(Role_node):
         number_of_chunks = math.ceil(number_of_chunks)
         # recive chunks
         for i in range(number_of_chunks):
-            result = core.receive_data_from(connection,verbose=False)
+            result = core.receive_data_from(connection,verbose=0)
             decoded = pickle.loads(result)
             if 'SChunkRow' in decoded:                
                 state, _ = core.send_bytes_to(encoded,connection,False)
@@ -224,34 +224,17 @@ class Data_node(Role_node):
             else: return False
 
         # now replicate
-        if  self.chord.predecessor[0] != None and self.chord.predecessor[0][0] != self.chord.id:
+        if  self.chord.predecessor[0] != None and self.chord.predecessor[0][0] != self.chord.id and self.chord.predecessor[0][1][0] != address[0]:
             # I'm the responsible, so only replicate
             replicated = self.chord.send_songs_and_chunks([tags], self.chord.predecessor[0][1])
             return replicated
         return True
-    # def replicate_data(self,request_data,connection,address):
-    #     # args = ( path='', database_bin:bytes = None, begin_new_data_base:bool = False, raw_songs_path=None )
-    #     with open(self.db_path,'rb') as f:
-    #         database_bin = f.read()
-
-    #     args = (self.path, database_bin, False, None)
-    #     encoded = pickle.dumps(tuple(['SolInit',args,core.TAIL]))
-
-    #     state, _ = core.send_bytes_to(encoded,connection,False)
-    #     if state == 'OK': 
-    #         result = core.receive_data_from(connection)
-    #         decoded = pickle.loads(result)
-    #         try: 
-    #             if 'ACK' in decoded:
-    #                 return True
-    #         except:
-    #             pass
-    #     return False
+    
 
     def add_song(self,request_data,connection,address):
         encoded = pickle.dumps(core.ACK_OK_tuple)
-        # print("send ack to upload song")
         state, _ = core.send_bytes_to(encoded,connection,False)
+
         song_bin = request_data[0]
         tags = request_data[1]
         dbc.insert_song_from_bytes(song_bin,tags, self.db_path)
@@ -259,9 +242,11 @@ class Data_node(Role_node):
         hash = self.chord.hash_song(tags)
         # replicate
         responsible = self.chord.find_successor(hash)
+        print(f'responsible for {hash}: {responsible}')
         if responsible[0] == self.chord.id:
             if  self.chord.predecessor[0] != None and self.chord.predecessor[0][0] != self.chord.id:
                 # I'm the responsible, so only replicate
+                print(" ---- Replicate the song to my predecessor ---- ")
                 replicated = self.chord.send_songs_and_chunks([tags], self.chord.predecessor[0][1])
                 return replicated
             else:
@@ -271,10 +256,10 @@ class Data_node(Role_node):
             encoded = pickle.dumps(tuple(['NSongRep',tags,core.TAIL]))
             sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
             sock.connect((responsible[1][0],core.CHORD_PORT))
-            state, _ = core.send_bytes_to(encoded,sock,False)
+            state, _ = core.send_bytes_to(encoded,sock,False,verbose=2)
             if state == 'OK': 
                 result = core.receive_data_from(sock)
-                sock.close()
+                # sock.close()
                 decoded = pickle.loads(result)
                 if 'ACK' in decoded:
 
@@ -285,7 +270,7 @@ class Data_node(Role_node):
                         # sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
                         # sock.connect((responsible[1][0],core.CHORD_PORT))
                         encoded = pickle.dumps(tuple(['SChunkRow',chunk,core.TAIL]))
-                        state, _ = core.send_bytes_to(encoded,sock,False,5,verbose=False)
+                        state, _ = core.send_bytes_to(encoded,sock,False,5,verbose=0)
                         if state == 'OK': 
                             result = core.receive_data_from(sock)
                             # sock.close()
@@ -306,7 +291,7 @@ class Data_node(Role_node):
     def request_songs_list(self,request_data,connection,address):
         self.songs_tags_list = dbc.get_aviable_songs(self.db_path)
         encoded = pickle.dumps(tuple(['SSList',self.songs_tags_list,core.TAIL]))
-        state, _ = core.send_bytes_to(encoded,connection,False)
+        state, _ = core.send_bytes_to(encoded,connection,False,verbose=2)
         if state == 'OK': 
             result = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=30)
             decoded = pickle.loads(result)
@@ -333,7 +318,7 @@ class Data_node(Role_node):
         for ch in chunks:
             try:
                 encoded = pickle.dumps(tuple(['Schunk',ch,core.TAIL]))
-                state, _ = core.send_bytes_to(encoded,connection,False,verbose=False)
+                state, _ = core.send_bytes_to(encoded,connection,False,verbose=0)
                 if state == 'OK': 
                     result = core.receive_data_from(connection)
                     decoded = pickle.loads(result)
@@ -351,7 +336,7 @@ class Data_node(Role_node):
         chunk = dbc.get_a_chunk(ms,id_Song,self.db_path) 
         try:
             encoded = pickle.dumps(tuple(['Schunk',chunk,core.TAIL]))
-            state, _ = core.send_bytes_to(encoded,connection,False,verbose=False)
+            state, _ = core.send_bytes_to(encoded,connection,False,verbose=0)
             if state == 'OK': 
                 result = core.receive_data_from(connection)
                 decoded = pickle.loads(result)
@@ -443,8 +428,8 @@ class Router_node(Role_node):
             sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
             sock.connect(ds)
 
-            core.send_bytes_to(encoded,sock,False)
-            result = core.receive_data_from(sock,waiting_time_ms=3000,iter_n=33,verbose=False)
+            core.send_bytes_to(encoded,sock,False,verbose=0)
+            result = core.receive_data_from(sock,waiting_time_ms=3000,iter_n=33,verbose=2)
             decoded = pickle.loads(result) 
             if 'SSList' in decoded:
                 ack = pickle.dumps(core.ACK_OK_tuple)
@@ -458,17 +443,13 @@ class Router_node(Role_node):
 
                     if not self.__already_in_song_list(s,new_song_list):
                         new_song_list.append(s)
-        for s in new_song_list:
-            if not self.__already_in_song_list(s,self.songs_tags_list):
-                self.songs_tags_list.append(s)
-                # print(self.songs_tags_list)
-
+        # for s in new_song_list:
+        #     if not self.__already_in_song_list(s,self.songs_tags_list):
+        #         self.songs_tags_list.append(s)
+        #         # print(self.songs_tags_list)
+        self.songs_tags_list = new_song_list
         self.songs_tags_list.sort(key=lambda x: x[0])
-        # if 'SSList' in decoded:
-        #     self.songs_tags_list = decoded[1]
-        # else:
-        #     print(decoded)
-        #     self.songs_tags_list = None
+        
 
         return self.songs_tags_list
     

@@ -6,7 +6,7 @@ import errors
 
 # Addresses
 DNS_addr = ('172.20.0.2', 5353)
-bytes_mult = 8
+bytes_mult = 2
 
 DATA_PORT = 7777
 ROUTER_PORT = 8888
@@ -31,7 +31,7 @@ ANSI_colors = {'blue': '\033[94m',
                }
 
 
-def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: bool = True, attempts: int = 3, time_to_retry_ms: int = 3000, bytes_flow: int = bytes_mult*1024, verbose=True):
+def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: bool = True, attempts: int = 3, time_to_retry_ms: int = 3000, bytes_flow: int = bytes_mult*1024, verbose=1):
     # number of sending attempts while a disconnection error pops up
     if attempts < 0:
         attempts = 3
@@ -50,9 +50,12 @@ def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: 
                 sent = connection.send(payload[start: end])
                 total_sent += sent
                 start += sent
-                print("\nSent %d/%d bytes" % (total_sent, len(payload)), connection)
+                if verbose > 0:
+                    print("\nSent %d/%d bytes" % (total_sent, len(payload)), connection)
+            if verbose == 0:
+                print("\nFinished. Sent %d/%d bytes" % (total_sent, len(payload)), connection)
             ok = True
-            if verbose:
+            if verbose > 1:
                 print("Sent : ",pickle.loads(payload))
             break
         except socket.error as error:
@@ -71,7 +74,7 @@ def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: 
     else:
         return "Connection Lost Error!", None
 
-def receive_data_from(connection: socket.socket, bytes_flow: int = bytes_mult*1024, waiting_time_ms: int = 3500, iter_n: int = 5, verbose=True):
+def receive_data_from(connection: socket.socket, bytes_flow: int = bytes_mult*1024, waiting_time_ms: int = 3500, iter_n: int = 5, verbose=0):
     def _receive_handler(queue: multiprocessing.Queue, connection: socket.socket, bytes_flow: int = bytes_mult*1024):
         rd = queue.get()
         msg = connection.recv(bytes_flow)
@@ -112,12 +115,14 @@ def receive_data_from(connection: socket.socket, bytes_flow: int = bytes_mult*10
         else:
             i += 1
 
-    print('Failed iter: ', i, '. Received data = ', len(data), ' From: ',connection)
-    if verbose and len(data) > 0:
-        try: print(pickle.loads(data))
-        except: pass
-    # else:
-    #     print('\n\t Unresponsive ',connection)
+    print('Failed iter: ', i, '. Received data = ', len(data))
+    if verbose > 0:
+        print( ' \tFrom: ',connection)
+    if len(data) > 0:
+        if verbose > 1:
+            try: print(pickle.loads(data))
+            except: pass
+
     return data
 
 def get_addr_from_dns(domain:str):

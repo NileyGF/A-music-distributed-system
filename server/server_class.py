@@ -112,7 +112,7 @@ class Server:
 
     def attend_connection(self,connection:socket,address):
 
-        received = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=5,verbose=False)
+        received = core.receive_data_from(connection,waiting_time_ms=3000,iter_n=5)
         while self.role_instance[0] == None:
             continue
         try:
@@ -161,39 +161,14 @@ class Server:
             return
         # data role
         self.role_instance[0] = nd.Data_node(self.serverIpAddr)
-        # for dn in data_nodes:
-            
-        #     try:
-        #         request = tuple(['ReqInit',None,core.TAIL])
-        #         encoded = pickle.dumps(request)
-        #         sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        #         sock.connect(dn)
-
-        #         sended, _ = core.send_bytes_to(encoded, sock, False)
-        #         if sended == 'OK':
-        #             result = core.receive_data_from(sock)
-        #             decoded = pickle.loads(result)
-        #             # Send ACK
-        #             ack = pickle.dumps(core.ACK_OK_tuple)
-        #             core.send_bytes_to(ack,sock,False)
-        #             sock.close()
-
-        #             if 'SolInit' in decoded:
-        #                 args = decoded[1]
-        #                 self.role_instance[0] = nd.Data_node(n_data+1,*args)
-        #                 return
-
-        #     except:
-        #         sock.close()
-        #         continue
+        
 
     def __join_ring(self,address:tuple):
         data_nodes = core.get_addr_from_dns('distpotify.data')
         router_nodes = core.get_addr_from_dns('distpotify.router')
         nodes_list = list(set(data_nodes + router_nodes))
 
-        # for nodes_list in [data_nodes, router_nodes]:
-        #     if nodes_list == None:  continue
+
         for node in nodes_list:
             if node[0] == self.serverIpAddr: continue
             try:
@@ -203,7 +178,7 @@ class Server:
                 sock.connect(node)
                 sended, _ = core.send_bytes_to(encoded, sock, False)
                 if sended == 'OK':
-                    result = core.receive_data_from(sock)
+                    result = core.receive_data_from(sock,verbose=2)
                     decoded = pickle.loads(result)
                     # Send ACK
                     ack = pickle.dumps(core.ACK_OK_tuple)
@@ -251,7 +226,7 @@ class Server:
         
         response = tuple(['JRingAt',(its_back,its_next,its_second),core.TAIL])
         encoded = pickle.dumps(response)
-        state = core.send_bytes_to(encoded,connection,False)
+        state = core.send_bytes_to(encoded,connection,False,verbose=2)
 
         if state [0] == "OK":
             result = core.receive_data_from(connection)
@@ -274,7 +249,7 @@ class Server:
                     message = pickle.dumps(tuple(['FixRing',('?',address[0],self.serverIpAddr),core.TAIL]))
                     sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
                     sock.connect(self.ring_links[0])
-                    sended, _ = core.send_bytes_to(message, sock, False)
+                    sended, _ = core.send_bytes_to(message, sock, False,verbose=2)
                     if sended == 'OK':
                         result = core.receive_data_from(sock)
                         decoded = pickle.loads(result)
@@ -340,7 +315,7 @@ class Server:
 
     def ping_next(self):
         while True:
-            time.sleep(15)
+            time.sleep(25)
             if self.ring_links[1] == None or self.ring_links[1][0] == self.serverIpAddr:
                 continue
 
@@ -350,9 +325,9 @@ class Server:
             sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
             try:
                 sock.connect(self.ring_links[1])
-                sended, _ = core.send_bytes_to(encoded, sock, False)
+                sended, _ = core.send_bytes_to(encoded, sock, False,verbose=0)
                 if sended == 'OK':
-                    result = core.receive_data_from(sock)
+                    result = core.receive_data_from(sock,verbose=0)
                     decoded = pickle.loads(result)
                     sock.close()
                     if 'ACK' in decoded:
@@ -411,7 +386,7 @@ class Server:
                     # next_neighbor has fallen 'FallenNode'
                     request = tuple(['FallenNode',[[(self.serverIpAddr,core.RING_PORT),self.role_instance[0].__str__()]],core.TAIL])
                     encoded = pickle.dumps(request)
-                    sended, _ = core.send_bytes_to(encoded, sock, False)
+                    sended, _ = core.send_bytes_to(encoded, sock, False,verbose=2)
                 except Exception as er:
                     print(er)
                     # It must be me the disconnected one
@@ -434,15 +409,11 @@ class Server:
     
         sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         sock.connect(self.ring_links[2])
-        sended, _ = core.send_bytes_to(encoded, sock, False)
+        sended, _ = core.send_bytes_to(encoded, sock, False,verbose=2)
         if sended == 'OK':
             result = core.receive_data_from(sock)
             decoded = pickle.loads(result)
             if 'ACK' in decoded:
-                # if 'OK' in decoded:
-                # sock.close()
-                #     raise Exception(" I was not his back. How can it be OK?")
-                # else:
                 result = core.receive_data_from(sock,waiting_time_ms=1500,iter_n=2)
                 try:
                     decoded = pickle.loads(result)
@@ -490,7 +461,7 @@ class Server:
                 else:
                     message = pickle.dumps(tuple(['FixRing',('?', self.serverIpAddr, self.ring_links[2][0]),core.TAIL]))
                 # send new second to this new neighbor
-                sended, _ = core.send_bytes_to(message, connection, False)
+                sended, _ = core.send_bytes_to(message, connection, False,verbose=2)
                 if sended == 'OK':
                     result = core.receive_data_from(connection)
                     decoded = pickle.loads(result)
@@ -499,16 +470,6 @@ class Server:
                         return True
         return False
                
-    # def update_back(self, request_data, connection, address):
-    #     if self.ring_links[0] == None:
-    #         self.ring_links[0] = (address[0],core.RING_PORT)
-    #         print('Updated back_neighbor',self.ring_links[0])
-    #     reply = core.ACK_OK_tuple
-    #     encoded = pickle.dumps(reply)
-    #     state, _ = core.send_bytes_to(encoded,connection,False)
-    #     return True
-
-
     def updatelinks(self, back_ip:str, next_ip:str, second_ip:str):
         # Next
         if next_ip != None and next_ip != self.serverIpAddr:
@@ -581,7 +542,7 @@ class Server:
             request_data.append([(self.serverIpAddr,core.RING_PORT),self.role_instance[0].__str__()])
             request = tuple(['FallenNode',request_data,core.TAIL])
             encoded = pickle.dumps(request)
-            sended, _ = core.send_bytes_to(encoded, sock, False)
+            sended, _ = core.send_bytes_to(encoded, sock, False,verbose=2)
             return True
         
         if unbalanced:
@@ -605,7 +566,7 @@ class Server:
                         n_router += 1
 
             print('datas: ',n_data,'routers: ',n_router)
-            if n_data < 2 and n_router >= 1:
+            if n_data < 2 and n_router > 1:
                 request = tuple(["Unbalance","Data_node",core.TAIL])
             elif n_router < 2 and n_data > 2: 
                 request = tuple(["Unbalance","Router_node",core.TAIL])
@@ -641,7 +602,7 @@ class Server:
                     return False
                 
             encoded = pickle.dumps(request)
-            sended, _ = core.send_bytes_to(encoded, sock, False)
+            sended, _ = core.send_bytes_to(encoded, sock, False,verbose=2)
             return sended == 'OK'
          
     def unbalanced_ring(self, request_data, connection, address):
@@ -675,7 +636,7 @@ class Server:
                 self.__join_ring((self.serverIpAddr, core.RING_PORT))
                 return False
             
-        sended, _ = core.send_bytes_to(encoded, sock, False)
+        sended, _ = core.send_bytes_to(encoded, sock, False,verbose=2)
         return True
 
 
