@@ -87,7 +87,8 @@ class Data_node(Role_node):
             songs_list = dbc.songs_list_from_directory(raw_songs_path)
             dbc.Insert_songs(songs_list,self.db_path)
         except Exception as er:
-            print(er)
+            print("Not inserting songs from file")
+            print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
         
         self.chord.data_base = self.db_path
         multiprocessing.set_start_method('fork', force=True)
@@ -112,14 +113,14 @@ class Data_node(Role_node):
             # raise Exception("The data server didn't receive any database. Initialize with a binary database or with the songs' path")
 
     def chord_handler(self):
-        print(core.ANSI_colors['cyan'])
+        # print(core.ANSI_colors['cyan'])
         self.chordSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.chordSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         address = (self.chord.ip, core.CHORD_PORT)
         self.chordSocket.bind(address)
         print(address)
         self.chordSocket.listen(5)
-        print(core.ANSI_colors['default'])
+        # print(core.ANSI_colors['default'])
 
         processes = []
         try:
@@ -428,7 +429,7 @@ class Router_node(Role_node):
             sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
             sock.connect(ds)
 
-            core.send_bytes_to(encoded,sock,False,verbose=0)
+            core.send_bytes_to(encoded,sock,False,verbose=2)
             result = core.receive_data_from(sock,waiting_time_ms=3000,iter_n=33,verbose=2)
             decoded = pickle.loads(result) 
             if 'SSList' in decoded:

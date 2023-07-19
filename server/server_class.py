@@ -148,13 +148,14 @@ class Server:
             router_nodes = core.get_addr_from_dns('distpotify.router')
             n_data = len(data_nodes)
             n_router = len(router_nodes)
-            if n_router * 3 < n_data:
+            if n_router * 3 > n_data:
                 role = 0
             else: role = 1
             if n_data == 1 and n_router >=1:
                 role = 0
         except:
             pass
+        # print('datas: ',n_data,'routers: ',n_router,'role:',role)
         # router role
         if role == 1:
             self.role_instance[0] = nd.Router_node()
@@ -339,16 +340,7 @@ class Server:
                             print("I'm not his previous. So there was a desconnection")
                             # I'm not his previous. So there was a desconnection
                             self.updatelinks(None,None,None)
-                            # print('\n Out of Ring\n')
-                            # try:
-                            #     self.ring_process.terminate()
-                            #     self.ring_process.join()
-                            #     self.ringSocket.close()
-                            # except:
-                            #     pass
-                            # time.sleep(15)
-                            # self.__join_ring((self.serverIpAddr, core.RING_PORT))
-                            # return
+    
                             continue
                             
             except Exception as er:
@@ -367,15 +359,7 @@ class Server:
                         self.ring_links[2] = self.ring_links[0]
                     else:
                         self.updatelinks(None,None,None)
-                    # try:
-                    #     self.ring_process.terminate()
-                    #     self.ring_process.join()
-                    #     self.ringSocket.close()
-                    # except:
-                    #     pass
-                    # time.sleep(15)
-                    # self.__join_ring((self.serverIpAddr, core.RING_PORT))
-                    # return
+
                     continue
                 
                 # Send Fallen node message
@@ -391,16 +375,6 @@ class Server:
                     print(er)
                     # It must be me the disconnected one
                     sock.close() 
-                    # try:
-                    #     self.ring_process.terminate()
-                    #     self.ring_process.join()
-                    #     self.ringSocket.close()
-                    # except:
-                    #     pass
-
-                    # time.sleep(15)
-                    # self.__join_ring((self.serverIpAddr, core.RING_PORT))
-                    # return
                     continue
                 
     def __report_second(self):
@@ -421,12 +395,14 @@ class Server:
                         self.fix_ring(decoded[1],sock,self.ring_links[2])
                 except:
                     self.updatelinks(None,None,None)
+                    print('\n new links: ', self.ring_links)   
         sock.close()
 
     def back_reporting(self, request_data, connection, address):
         # if back was None : update it
         if self.ring_links[0] == None or self.ring_links[0][0] == self.serverIpAddr:
             self.ring_links[0] = request_data[0]
+            print('\n new links: ', self.ring_links)   
             reply = core.ACK_OK_tuple
             encoded = pickle.dumps(reply)
             state, _ = core.send_bytes_to(encoded,connection,False)
@@ -510,7 +486,7 @@ class Server:
         unbalanced = False
         add_self = True
         for node in request_data:
-            print(node[0][0]) # TODO erase
+            # print(node[0][0]) # TODO erase
             if node[0][0] == self.serverIpAddr:
                 # it's back to me. Check balance
                 unbalanced = True

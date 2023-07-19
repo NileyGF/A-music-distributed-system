@@ -152,9 +152,9 @@ class Node:
         try:
             sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
             sock.connect(node_addr)
-            sended, _ = core.send_bytes_to(encoded, sock, False)
+            sended, _ = core.send_bytes_to(encoded, sock, False,verbose=2)
             if sended == 'OK':
-                result = core.receive_data_from(sock)
+                result = core.receive_data_from(sock,verbose=2)
                 decoded = pickle.loads(result)
                 # Send ACK
                 ack = pickle.dumps(core.ACK_OK_tuple)
@@ -163,7 +163,7 @@ class Node:
                 if 'JChordAt' in decoded:
                     self.successor[0] = decoded[1] # (id, address)
                     self.finger_table[0][1] [0] = self.successor[0]
-                    # print(self.successor)
+                    print("new successor: ",self.successor[0])
                     # ask for the keys <= self.id, from successor
                     if self.successor[0][0] != self.id:
                         self.get_keys_init()
@@ -388,17 +388,17 @@ class Node:
     def find_predecessor(self, search_id):
         """ Provides the predecessor of any value in the ring given its id."""
         if search_id == self.id:
-            # print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
+            print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
         if self.predecessor[0] is not None and  self.successor[0][0] == self.id:
-            # print(f" ---- Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
+            print(f" ---- Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
         # print(core.ANSI_colors['cyan'])
         if self.predecessor[0] is not None and self.get_forward_distance(self.id, self.successor[0][0]) > self.get_forward_distance(self.id, search_id):
             # print(core.ANSI_colors['default'])
-            # print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
+            print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
         else:
@@ -406,16 +406,16 @@ class Node:
             # n0 := closest_preceding_node(search_id)
             # return n0.find_successor(search_id)
             new_node_hop = self.closest_preceding_node(search_id)
-            # print(f"new_node_hop {new_node_hop}")
+            print(f"new_node_hop {new_node_hop}")
             if new_node_hop is None:
                 # print(core.ANSI_colors['default'])
-                # print(f" Predecessor of {search_id} is {None}")
+                print(f" Predecessor of {search_id} is {None}")
                 return None
             ip, port = new_node_hop [1]
             if ip == self.ip and port == self.port:
                 # print(core.ANSI_colors['default'])
                 # print(f" I'm predecessor")
-                # print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
+                print(f" Predecessor of {search_id} is {(self.id, (self.ip, self.port))}")
                 return (self.id, (self.ip, self.port))
             
             try:
@@ -433,7 +433,7 @@ class Node:
                     sock.close()
                     if 'SPcssN' in decoded:
                         # print(core.ANSI_colors['default'])
-                        # print(f" Predecessor of {search_id} is {decoded[1]}")
+                        print(f" Predecessor of {search_id} is {decoded[1]}")
                         return decoded[1]
             except Exception as er:
                 # print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])
@@ -444,7 +444,7 @@ class Node:
     def find_successor(self, search_id):
         """ Provides the successor of any value in the ring given its id."""
         if(search_id == self.id):
-            # print(f" Successor of {search_id} is {(self.id, (self.ip, self.port))}")
+            print(f" Successor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         
         # print(core.ANSI_colors['cyan'])
@@ -452,14 +452,14 @@ class Node:
    
         if predecessor == None:
             # print(core.ANSI_colors['default'])
-            # print(f" Successor of {search_id} is {None}")
+            print(f" Successor of {search_id} is {None}")
             return None
         if predecessor[0] == self.id:
             # print(core.ANSI_colors['default'])
             if self.successor[0]:
-                # print(f" Successor of {search_id} is {self.successor[0]}")
+                print(f" Successor of {search_id} is {self.successor[0]}")
                 return self.successor[0]
-            # print(f" Successor of {search_id} is {(self.id, (self.ip, self.port))}")
+            print(f" Successor of {search_id} is {(self.id, (self.ip, self.port))}")
             return (self.id, (self.ip, self.port))
         try:
             request = tuple(['RSccssN',search_id,core.TAIL])
@@ -476,7 +476,7 @@ class Node:
                 sock.close()
                 if 'SSccssN' in decoded:
                     # print(core.ANSI_colors['default'])
-                    # print(f" Successor of {search_id} is {decoded[1]}")
+                    print(f" Successor of {search_id} is {decoded[1]}")
                     return decoded[1]
         except Exception as er:
             # print(core.ANSI_colors['red'],er,core.ANSI_colors['default'])

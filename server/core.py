@@ -74,7 +74,7 @@ def send_bytes_to(payload: bytes, connection: socket.socket, wait_for_response: 
     else:
         return "Connection Lost Error!", None
 
-def receive_data_from(connection: socket.socket, bytes_flow: int = bytes_mult*1024, waiting_time_ms: int = 3500, iter_n: int = 5, verbose=0):
+def receive_data_from(connection: socket.socket, bytes_flow: int = bytes_mult*1024, waiting_time_ms: int = 5000, iter_n: int = 5, verbose=0):
     def _receive_handler(queue: multiprocessing.Queue, connection: socket.socket, bytes_flow: int = bytes_mult*1024):
         rd = queue.get()
         msg = connection.recv(bytes_flow)
@@ -130,8 +130,8 @@ def get_addr_from_dns(domain:str):
     sock.connect(DNS_addr)
     h_d_t_list = tuple(["RNSolve",domain,TAIL])
     pickled_data = pickle.dumps(h_d_t_list)
-    send_bytes_to(pickled_data,sock,False)
-    result = receive_data_from(sock,waiting_time_ms=5000,iter_n=8)
+    send_bytes_to(pickled_data,sock,False,verbose=2)
+    result = receive_data_from(sock,waiting_time_ms=5000,iter_n=8,verbose=2)
     if not result or len(result) == 0:
         raise errors.ConnectionError("DNS unresponsive.")
     result = pickle.loads(result)
@@ -154,7 +154,7 @@ def send_addr_to_dns(domain:str, address:tuple, ttl:int=60):
     sock.connect(DNS_addr)
 
     state, _ = send_bytes_to(encoded,sock,False)
-    result = receive_data_from(sock,waiting_time_ms=3000,iter_n=3)
+    result = receive_data_from(sock,verbose=2)
     decoded = pickle.loads(result)
     try: 
         if decoded[0] == 'ACK' and decoded[1] == 'OK':
